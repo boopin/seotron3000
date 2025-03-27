@@ -2,7 +2,7 @@
 SEOtron 3000: The Galactic Web Analyzer
 Version: 3.0
 Updated: March 2025
-Description: Unleash the power of SEOtron 3000, a hyper-advanced tool forged by xAI to scan the digital cosmos!
+Description: Unleash the power of SEOTron 3000, a hyper-advanced tool forged by xAI to scan the digital cosmos!
 Analyze webpages with laser precision—meta tags, headings, links, readability, image SEO, mobile readiness, and more.
 """
 
@@ -223,8 +223,8 @@ def display_wordcloud(keywords):
     return plt
 
 def main():
-    st.set_page_config(page_title="SEOtron 3000: The Galactic Web Analyzer", layout="wide", page_icon="icon.png")
-    st.title("SEOtron 3000: The Galactic Web Analyzer")
+    st.set_page_config(page_title="SEOTron 3000: The Galactic Web Analyzer", layout="wide", page_icon="icon.png")
+    st.title("SEOTron 3000: The Galactic Web Analyzer")
     st.markdown("*Scanning the digital cosmos with laser precision!*")
 
     # Settings
