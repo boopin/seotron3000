@@ -345,3 +345,18 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+# Sidebar toggle for showing legend
+show_legend = st.sidebar.checkbox("Show Readability Score Legend", value=True)
+
+if show_legend:
+    with st.expander("📘 Readability Score Legend", expanded=True):
+        st.markdown("""
+- **Flesch Reading Ease**: Ranges from 0 to 100. Higher scores = easier to read.
+  - 90–100: Very easy (5th grade)
+  - 60–70: Standard (8th–9th grade)
+  - 0–30: Very difficult (college graduate)
+- **Flesch-Kincaid Grade Level**: Indicates U.S. school grade required to understand the content.
+- **Gunning Fog Index**: Predicts years of formal education needed to comprehend the text.
+        """)
