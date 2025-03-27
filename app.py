@@ -20,10 +20,6 @@ from textstat import flesch_reading_ease, flesch_kincaid_grade, gunning_fog
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from concurrent.futures import ThreadPoolExecutor
-import matplotlib.pyplot as plt
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-import io
 import plotly.express as px
 
 # Pre-download NLTK data
@@ -44,32 +40,23 @@ def preprocess_url(url):
         return f'https://{url}'
     return url
 
-def get_load_time(url, full_render=False, retries=3):
+def get_load_time(url, retries=2):
     for attempt in range(retries):
         try:
-            if full_render:
-                options = Options()
-                options.headless = True
-                driver = webdriver.Chrome(options=options)
-                start_time = time.time()
-                driver.get(url)
-                end_time = time.time()
-                driver.quit()
-            else:
-                start_time = time.time()
-                requests.get(url, timeout=10)
-                end_time = time.time()
+            start_time = time.time()
+            requests.get(url, timeout=5)  # Reduced timeout
+            end_time = time.time()
             return round((end_time - start_time) * 1000)
         except requests.Timeout:
             if attempt == retries - 1:
-                return "Timeout after 10s"
+                return "Timeout after 5s"
         except requests.ConnectionError:
             return "Connection Failed"
         except Exception as e:
             return f"Error: {str(e)}"
     return None
 
-def extract_keywords(text, num_keywords=20, target_keywords=None):
+def extract_keywords(text, num_keywords=10, target_keywords=None):
     stop_words = set(stopwords.words("english")) | set(punctuation)
     words = [word.lower() for word in word_tokenize(text) if word.lower() not in stop_words and word.isalnum()]
     word_counts = Counter(words)
@@ -99,11 +86,11 @@ def extract_headings(soup):
 def extract_internal_links(soup, base_url):
     domain = urlparse(base_url).netloc
     internal_links = []
-    for a in soup.find_all('a', href=True):
+    for a in soup.find_all('a', href=True)[:20]:  # Limit to 20 links
         href = urljoin(base_url, a['href'])
         if urlparse(href).netloc == domain:
             try:
-                response = requests.head(href, timeout=5)
+                response = requests.head(href, timeout=3)
                 status = response.status_code
             except:
                 status = "Error"
@@ -113,11 +100,11 @@ def extract_internal_links(soup, base_url):
 def extract_external_links(soup, base_url):
     domain = urlparse(base_url).netloc
     external_links = []
-    for a in soup.find_all('a', href=True):
+    for a in soup.find_all('a', href=True)[:20]:  # Limit to 20 links
         href = urljoin(base_url, a['href'])
         if urlparse(href).netloc and urlparse(href).netloc != domain:
             try:
-                response = requests.head(href, timeout=5)
+                response = requests.head(href, timeout=3)
                 status = response.status_code
             except:
                 status = "Error"
@@ -125,15 +112,15 @@ def extract_external_links(soup, base_url):
     return external_links
 
 def extract_image_data(soup):
-    images = soup.find_all('img')
+    images = soup.find_all('img')[:10]  # Limit to 10 images
     image_data = []
     for img in images:
         src = img.get('src', '')
         alt = img.get('alt', '')
         has_alt = bool(alt)
         try:
-            response = requests.head(urljoin(soup.url, src), timeout=5)
-            size = int(response.headers.get('content-length', 0)) / 1024  # KB
+            response = requests.head(urljoin(soup.url, src), timeout=3)
+            size = int(response.headers.get('content-length', 0)) / 1024
         except:
             size = None
         image_data.append({'src': src, 'alt': alt, 'size_kb': size, 'has_alt': has_alt})
@@ -151,7 +138,7 @@ def check_robots_txt(url):
     domain = urlparse(url).netloc
     robots_url = f"https://{domain}/robots.txt"
     try:
-        response = requests.get(robots_url, timeout=5)
+        response = requests.get(robots_url, timeout=3)
         return "Disallow" in response.text if response.status_code == 200 else "Not Found"
     except:
         return "Error"
@@ -159,17 +146,20 @@ def check_robots_txt(url):
 def detect_duplicates(contents):
     if len(contents) < 2:
         return None
-    vectorizer = TfidfVectorizer()
-    tfidf_matrix = vectorizer.fit_transform(contents)
-    similarity_matrix = cosine_similarity(tfidf_matrix)
-    return similarity_matrix
+    try:
+        vectorizer = TfidfVectorizer()
+        tfidf_matrix = vectorizer.fit_transform(contents)
+        similarity_matrix = cosine_similarity(tfidf_matrix)
+        return similarity_matrix
+    except:
+        return None
 
 def calculate_seo_score(result):
     score = 0
     if isinstance(result['load_time_ms'], (int, float)):
-        score += max(0, 20 - (result['load_time_ms'] / 100))  # Max 20
+        score += max(0, 20 - (result['load_time_ms'] / 100))
     score += 20 if result['mobile_friendly'] else 0
-    readability = (result['flesch_reading_ease'] / 100) * 20  # Scale to 20
+    readability = (result['flesch_reading_ease'] / 100) * 20
     score += readability
     link_score = min(result['internal_link_count'] / 10, 1) * 10 + min(result['external_link_count'] / 5, 1) * 10
     score += link_score
@@ -177,8 +167,7 @@ def calculate_seo_score(result):
     score += image_score
     return min(round(score), 100)
 
-@st.cache_data
-def analyze_url(url, full_render=False, target_keywords=None):
+def analyze_url(url, target_keywords=None):
     headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
     result = {
         'url': url,
@@ -200,10 +189,11 @@ def analyze_url(url, full_render=False, target_keywords=None):
         'alt_text_missing': 0
     }
     try:
-        result['load_time_ms'] = get_load_time(url, full_render)
+        st.write(f"Fetching {url}...")
+        result['load_time_ms'] = get_load_time(url)
         if "Error" in str(result['load_time_ms']):
             raise Exception(result['load_time_ms'])
-        response = requests.get(url, headers=headers, timeout=10)
+        response = requests.get(url, headers=headers, timeout=5)
         soup = BeautifulSoup(response.text, 'html.parser')
         soup.url = url
         text_content = ' '.join([p.text.strip() for p in soup.find_all(['p', 'div', 'span'])])
@@ -248,6 +238,7 @@ def analyze_url(url, full_render=False, target_keywords=None):
 
     except Exception as e:
         result['status'] = f"Error: {str(e)}"
+        st.error(f"Failed to analyze {url}: {str(e)}")
 
     return result, text_content
 
@@ -259,12 +250,11 @@ def main():
     # Settings
     with st.sidebar:
         st.header("Control Panel")
-        full_render = st.checkbox("Full Render Load Time (Selenium)", False)
         target_keywords = st.text_input("Target Keywords (comma-separated)", "").split(",")
         target_keywords = [kw.strip() for kw in target_keywords if kw.strip()] or None
 
     # Input URLs
-    urls_input = st.text_area("Enter URLs (one per line, max 10)", height=200)
+    urls_input = st.text_area("Enter URLs (one per line, max 5)", height=200)
     urls = [url.strip() for url in urls_input.split('\n') if url.strip()]
 
     if 'results' not in st.session_state:
@@ -281,9 +271,9 @@ def main():
             if retry:
                 urls = [r['url'] for r in st.session_state.results if r['status'] != "Success"]
             urls = [preprocess_url(url) for url in urls]
-            if len(urls) > 10:
-                st.warning("Max 10 URLs allowed. Analyzing first 10.")
-                urls = urls[:10]
+            if len(urls) > 5:  # Reduced max URLs
+                st.warning("Max 5 URLs allowed. Analyzing first 5.")
+                urls = urls[:5]
 
             results = []
             contents = []
@@ -291,16 +281,20 @@ def main():
             external_links_data = []
             headings_data = []
             images_data = []
-            progress_bar = st.progress(0)
 
             with st.spinner("Analyzing URLs..."):
-                with ThreadPoolExecutor(max_workers=5) as executor:
-                    future_to_url = {executor.submit(analyze_url, url, full_render, target_keywords): url for url in urls}
+                with ThreadPoolExecutor(max_workers=2) as executor:  # Reduced workers
+                    future_to_url = {executor.submit(analyze_url, url, target_keywords): url for url in urls}
                     for i, future in enumerate(future_to_url):
-                        result, content = future.result()
-                        results.append(result)
-                        contents.append(content)
-                        progress_bar.progress((i + 1) / len(urls))
+                        try:
+                            result, content = future.result()
+                            results.append(result)
+                            contents.append(content)
+                            st.write(f"Completed {i+1}/{len(urls)}: {result['url']}")
+                        except Exception as e:
+                            st.error(f"Analysis failed for {future_to_url[future]}: {str(e)}")
+                            results.append({'url': future_to_url[future], 'status': f"Error: {str(e)}"})
+                            contents.append("")
 
                         for link in result.get('internal_links', []):
                             internal_links_data.append({'page_url': result['url'], 'link_url': link['url'], 'anchor_text': link['anchor_text'], 'status_code': link['status_code']})
@@ -335,7 +329,6 @@ def main():
                 }
                 summary_df = pd.DataFrame(summary)
 
-                # Color-code readability scores and SEO score
                 flesch_score = summary_df["Avg Flesch Reading Ease"][0]
                 flesch_color = "green" if flesch_score >= 70 else "yellow" if flesch_score >= 50 else "red"
                 kincaid_score = summary_df["Avg Flesch-Kincaid Grade"][0]
@@ -353,7 +346,6 @@ def main():
                 - <span style='color:{seo_color}'>Avg SEO Score: {seo_score:.2f}</span>
                 """, unsafe_allow_html=True)
 
-                # Keyword Density Recommendations
                 if target_keywords:
                     st.write("Keyword Density Recommendations:")
                     for result in results:
@@ -363,14 +355,12 @@ def main():
                                 recommendation = "Optimal" if 1 <= density <= 2 else "Increase" if density < 1 else "Reduce"
                                 st.write(f"- '{kw}': {density:.2f}% ({recommendation})")
 
-                # Broken Links Summary
                 broken_internals = [link for link in internal_links_data if isinstance(link['status_code'], int) and link['status_code'] >= 400]
                 broken_externals = [link for link in external_links_data if isinstance(link['status_code'], int) and link['status_code'] >= 400]
                 if broken_internals or broken_externals:
                     st.write("**Broken Links Detected:**")
                     st.write(f"Internal: {len(broken_internals)}, External: {len(broken_externals)}")
 
-                # Accessibility Audit
                 st.write("**Accessibility Summary:**")
                 for result in results:
                     if result['status'] == "Success":
@@ -378,7 +368,6 @@ def main():
                         st.write(f"- Images missing alt text: {result['alt_text_missing']}")
                         st.write(f"- Heading hierarchy issues: {'Yes' if result['hierarchy_issues'] else 'No'}")
 
-                # Color-code duplicate content similarity
                 if duplicate_matrix is not None:
                     st.markdown("**Duplicate Content Similarity (Cosine):**")
                     for i in range(len(duplicate_matrix)):
@@ -388,11 +377,9 @@ def main():
                                 color = "green" if similarity < 0.5 else "yellow" if similarity < 0.8 else "red"
                                 st.markdown(f"URLs {i+1} vs {j+1}: <span style='color:{color}'>{similarity:.2f}</span>", unsafe_allow_html=True)
 
-                # Download Full Report
                 full_report = pd.concat([summary_df, df, pd.DataFrame(internal_links_data), pd.DataFrame(external_links_data), pd.DataFrame(headings_data), pd.DataFrame(images_data)], axis=1)
                 st.download_button("Download Full Report", full_report.to_csv(index=False).encode('utf-8'), "seotron3000_report.csv", "text/csv")
 
-                # Legends
                 st.markdown("### Readability Legend")
                 st.markdown("""
                 **Flesch Reading Ease (0-100):** Measures text readability. Higher scores indicate easier reading.  
