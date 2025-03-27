@@ -11,7 +11,6 @@ import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 from urllib.parse import urlparse, urljoin
-import re
 import time
 from collections import Counter
 import nltk
@@ -224,7 +223,7 @@ def display_wordcloud(keywords):
     return plt
 
 def main():
-    st.set_page_config(page_title="SEOtron 3000: The Galactic Web Analyzer", layout="wide")
+    st.set_page_config(page_title="SEOtron 3000: The Galactic Web Analyzer", layout="wide", page_icon="icon.png")
     st.title("SEOtron 3000: The Galactic Web Analyzer")
     st.markdown("*Scanning the digital cosmos with laser precision!*")
 
@@ -297,6 +296,45 @@ def main():
                     st.write("Duplicate Content Similarity (Cosine):")
                     st.write(duplicate_matrix)
 
+                # Readability Legend
+                st.markdown("### Readability Legend")
+                st.markdown("""
+                <link href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap" rel="stylesheet">
+                <style>
+                .legend-box {
+                    background-color: #1E3A8A;
+                    padding: 15px;
+                    border-radius: 10px;
+                    color: #D1D5DB;
+                    font-family: 'Orbitron', sans-serif;
+                }
+                .legend-title {
+                    color: #39FF14;
+                    font-weight: bold;
+                }
+                </style>
+                <div class="legend-box">
+                    <p class="legend-title">Flesch Reading Ease (0-100)</p>
+                    <ul>
+                        <li><b>70-100</b>: Easy-peasy, a spacewalk for beginners.</li>
+                        <li><b>50-70</b>: Moderate, smooth orbit for most readers.</li>
+                        <li><b>0-50</b>: Tricky, like an asteroid field.</li>
+                    </ul>
+                    <p class="legend-title">Flesch-Kincaid Grade (Grade Level)</p>
+                    <ul>
+                        <li><b>5-7</b>: Light-speed simplicity.</li>
+                        <li><b>8-10</b>: Standard orbit, ideal for web content.</li>
+                        <li><b>11+</b>: Warp-speed complexity.</li>
+                    </ul>
+                    <p class="legend-title">Gunning Fog Index (Grade Level)</p>
+                    <ul>
+                        <li><b>6-8</b>: Clear hyperspace, highly readable.</li>
+                        <li><b>9-12</b>: Moderate nebula, business-level.</li>
+                        <li><b>13+</b>: Dense cosmic fog, technical.</li>
+                    </ul>
+                </div>
+                """, unsafe_allow_html=True)
+
             with tabs[1]:
                 st.subheader("Core Metrics")
                 display_columns = [
@@ -345,18 +383,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-# Sidebar toggle for showing legend
-show_legend = st.sidebar.checkbox("Show Readability Score Legend", value=True)
-
-if show_legend:
-    with st.expander("📘 Readability Score Legend", expanded=True):
-        st.markdown("""
-- **Flesch Reading Ease**: Ranges from 0 to 100. Higher scores = easier to read.
-  - 90–100: Very easy (5th grade)
-  - 60–70: Standard (8th–9th grade)
-  - 0–30: Very difficult (college graduate)
-- **Flesch-Kincaid Grade Level**: Indicates U.S. school grade required to understand the content.
-- **Gunning Fog Index**: Predicts years of formal education needed to comprehend the text.
-        """)
