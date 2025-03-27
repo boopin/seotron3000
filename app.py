@@ -296,44 +296,24 @@ def main():
                     st.write("Duplicate Content Similarity (Cosine):")
                     st.write(duplicate_matrix)
 
-                # Readability Legend
+                # Simplified Readability Legend
                 st.markdown("### Readability Legend")
                 st.markdown("""
-                <link href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap" rel="stylesheet">
-                <style>
-                .legend-box {
-                    background-color: #1E3A8A;
-                    padding: 15px;
-                    border-radius: 10px;
-                    color: #D1D5DB;
-                    font-family: 'Orbitron', sans-serif;
-                }
-                .legend-title {
-                    color: #39FF14;
-                    font-weight: bold;
-                }
-                </style>
-                <div class="legend-box">
-                    <p class="legend-title">Flesch Reading Ease (0-100)</p>
-                    <ul>
-                        <li><b>70-100</b>: Easy-peasy, a spacewalk for beginners.</li>
-                        <li><b>50-70</b>: Moderate, smooth orbit for most readers.</li>
-                        <li><b>0-50</b>: Tricky, like an asteroid field.</li>
-                    </ul>
-                    <p class="legend-title">Flesch-Kincaid Grade (Grade Level)</p>
-                    <ul>
-                        <li><b>5-7</b>: Light-speed simplicity.</li>
-                        <li><b>8-10</b>: Standard orbit, ideal for web content.</li>
-                        <li><b>11+</b>: Warp-speed complexity.</li>
-                    </ul>
-                    <p class="legend-title">Gunning Fog Index (Grade Level)</p>
-                    <ul>
-                        <li><b>6-8</b>: Clear hyperspace, highly readable.</li>
-                        <li><b>9-12</b>: Moderate nebula, business-level.</li>
-                        <li><b>13+</b>: Dense cosmic fog, technical.</li>
-                    </ul>
-                </div>
-                """, unsafe_allow_html=True)
+                **Flesch Reading Ease (0-100):** Measures text readability. Higher scores indicate easier reading.  
+                - 70-100: Very easy to read.  
+                - 50-70: Moderately easy, suitable for most audiences.  
+                - 0-50: Difficult to read.  
+
+                **Flesch-Kincaid Grade (Grade Level):** Indicates the U.S. grade level needed to understand the text.  
+                - 5-7: Easy, readable by 5th-7th graders.  
+                - 8-10: Average, suitable for general web content.  
+                - 11+: Advanced, requires higher education.  
+
+                **Gunning Fog Index (Grade Level):** Estimates years of education needed based on complex words and sentence length.  
+                - 6-8: Easy, widely accessible.  
+                - 9-12: Moderate, professional-level reading.  
+                - 13+: Complex, technical or academic.
+                """)
 
             with tabs[1]:
                 st.subheader("Core Metrics")
