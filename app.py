@@ -2,7 +2,7 @@
 SEOtron 3000: The Galactic Web Analyzer
 Version: 3.0
 Updated: March 2025
-Description: Unleash the power of SEOTron 3000, a hyper-advanced tool forged by xAI to scan the digital cosmos!
+Description: Unleash the power of SEOtron 3000, a hyper-advanced tool forged by xAI to scan the digital cosmos!
 Analyze webpages with laser precision—meta tags, headings, links, readability, image SEO, mobile readiness, and more.
 """
 
@@ -223,8 +223,8 @@ def display_wordcloud(keywords):
     return plt
 
 def main():
-    st.set_page_config(page_title="SEOTron 3000: The Galactic Web Analyzer", layout="wide", page_icon="icon.png")
-    st.title("SEOTron 3000: The Galactic Web Analyzer")
+    st.set_page_config(page_title="SEOtron 3000: The Galactic Web Analyzer", layout="wide", page_icon="icon.png")
+    st.title("SEOtron 3000: The Galactic Web Analyzer")
     st.markdown("*Scanning the digital cosmos with laser precision!*")
 
     # Settings
@@ -318,7 +318,7 @@ def main():
                                 color = "green" if similarity < 0.5 else "yellow" if similarity < 0.8 else "red"
                                 st.markdown(f"URLs {i+1} vs {j+1}: <span style='color:{color}'>{similarity:.2f}</span>", unsafe_allow_html=True)
 
-                # Simplified Readability Legend
+                # Readability Legend
                 st.markdown("### Readability Legend")
                 st.markdown("""
                 **Flesch Reading Ease (0-100):** Measures text readability. Higher scores indicate easier reading.  
@@ -335,6 +335,15 @@ def main():
                 - 6-8: Easy, widely accessible (Green).  
                 - 9-12: Moderate, professional-level reading (Yellow).  
                 - 13+: Complex, technical or academic (Red).
+                """)
+
+                # Duplicate Content Similarity Legend
+                st.markdown("### Duplicate Content Similarity Legend")
+                st.markdown("""
+                **Duplicate Content Similarity (Cosine, 0-1):** Measures text similarity between URLs. Higher values indicate more duplication.  
+                - 0.0-0.5: Low similarity, unique content (Green).  
+                - 0.5-0.8: Moderate similarity, some overlap (Yellow).  
+                - 0.8-1.0: High similarity, potential duplicates (Red).
                 """)
 
             with tabs[1]:
