@@ -278,7 +278,7 @@ def main():
             tabs = st.tabs(["Summary", "Main Table", "Internal Links", "External Links", "Headings", "Images", "Visualizations"])
 
             with tabs[0]:
-                st.subheader("Galactic Summary")
+                st.subheader("Summary")
                 summary = {
                     "Avg Load Time (ms)": [df['load_time_ms'].mean()],
                     "Avg Word Count": [df['word_count'].mean()],
@@ -291,28 +291,50 @@ def main():
                     "Mobile-Friendly Sites": [df['mobile_friendly'].sum()],
                     "Total URLs": [len(df)],
                 }
-                st.dataframe(pd.DataFrame(summary))
+                summary_df = pd.DataFrame(summary)
+
+                # Color-code readability scores
+                flesch_score = summary_df["Avg Flesch Reading Ease"][0]
+                flesch_color = "green" if flesch_score >= 70 else "yellow" if flesch_score >= 50 else "red"
+                kincaid_score = summary_df["Avg Flesch-Kincaid Grade"][0]
+                kincaid_color = "green" if kincaid_score <= 7 else "yellow" if kincaid_score <= 10 else "red"
+                gunning_score = summary_df["Avg Gunning Fog"][0]
+                gunning_color = "green" if gunning_score <= 8 else "yellow" if gunning_score <= 12 else "red"
+
+                st.dataframe(summary_df)
+                st.markdown(f"""
+                - <span style='color:{flesch_color}'>Avg Flesch Reading Ease: {flesch_score:.2f}</span>  
+                - <span style='color:{kincaid_color}'>Avg Flesch-Kincaid Grade: {kincaid_score:.2f}</span>  
+                - <span style='color:{gunning_color}'>Avg Gunning Fog: {gunning_score:.2f}</span>
+                """, unsafe_allow_html=True)
+
+                # Color-code duplicate content similarity
                 if duplicate_matrix is not None:
-                    st.write("Duplicate Content Similarity (Cosine):")
-                    st.write(duplicate_matrix)
+                    st.markdown("**Duplicate Content Similarity (Cosine):**")
+                    for i in range(len(duplicate_matrix)):
+                        for j in range(len(duplicate_matrix[i])):
+                            if i < j:  # Only show upper triangle to avoid redundancy
+                                similarity = duplicate_matrix[i][j]
+                                color = "green" if similarity < 0.5 else "yellow" if similarity < 0.8 else "red"
+                                st.markdown(f"URLs {i+1} vs {j+1}: <span style='color:{color}'>{similarity:.2f}</span>", unsafe_allow_html=True)
 
                 # Simplified Readability Legend
                 st.markdown("### Readability Legend")
                 st.markdown("""
                 **Flesch Reading Ease (0-100):** Measures text readability. Higher scores indicate easier reading.  
-                - 70-100: Very easy to read.  
-                - 50-70: Moderately easy, suitable for most audiences.  
-                - 0-50: Difficult to read.  
+                - 70-100: Very easy to read (Green).  
+                - 50-70: Moderately easy, suitable for most audiences (Yellow).  
+                - 0-50: Difficult to read (Red).  
 
                 **Flesch-Kincaid Grade (Grade Level):** Indicates the U.S. grade level needed to understand the text.  
-                - 5-7: Easy, readable by 5th-7th graders.  
-                - 8-10: Average, suitable for general web content.  
-                - 11+: Advanced, requires higher education.  
+                - 5-7: Easy, readable by 5th-7th graders (Green).  
+                - 8-10: Average, suitable for general web content (Yellow).  
+                - 11+: Advanced, requires higher education (Red).  
 
                 **Gunning Fog Index (Grade Level):** Estimates years of education needed based on complex words and sentence length.  
-                - 6-8: Easy, widely accessible.  
-                - 9-12: Moderate, professional-level reading.  
-                - 13+: Complex, technical or academic.
+                - 6-8: Easy, widely accessible (Green).  
+                - 9-12: Moderate, professional-level reading (Yellow).  
+                - 13+: Complex, technical or academic (Red).
                 """)
 
             with tabs[1]:
