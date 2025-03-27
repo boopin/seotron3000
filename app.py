@@ -20,13 +20,11 @@ from textstat import flesch_reading_ease, flesch_kincaid_grade, gunning_fog
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from concurrent.futures import ThreadPoolExecutor
-from wordcloud import WordCloud
 import matplotlib.pyplot as plt
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 import io
 import plotly.express as px
-from st_aggrid import AgGrid, GridOptionsBuilder
 
 # Pre-download NLTK data
 nltk_data_path = "./nltk_data"
@@ -94,9 +92,8 @@ def extract_headings(soup):
         heading_tag = f'h{i}'
         for h in soup.find_all(heading_tag):
             headings.append({'level': heading_tag.upper(), 'text': h.text.strip()})
-    # Check heading hierarchy
     levels = [int(h['level'][1]) for h in headings]
-    hierarchy_issues = any(levels[i] > levels[i+1] + 1 for i in range(len(levels)-1))
+    hierarchy_issues = any(levels[i] > levels[i+1] + 1 for i in range(len(levels)-1)) if levels else False
     return headings, hierarchy_issues
 
 def extract_internal_links(soup, base_url):
@@ -168,10 +165,9 @@ def detect_duplicates(contents):
     return similarity_matrix
 
 def calculate_seo_score(result):
-    # Weights: Load time (20%), Mobile (20%), Readability (20%), Links (20%), Images (20%)
     score = 0
     if isinstance(result['load_time_ms'], (int, float)):
-        score += max(0, 20 - (result['load_time_ms'] / 100))  # Faster = better, max 20
+        score += max(0, 20 - (result['load_time_ms'] / 100))  # Max 20
     score += 20 if result['mobile_friendly'] else 0
     readability = (result['flesch_reading_ease'] / 100) * 20  # Scale to 20
     score += readability
@@ -255,13 +251,6 @@ def analyze_url(url, full_render=False, target_keywords=None):
 
     return result, text_content
 
-def display_wordcloud(keywords):
-    wordcloud = WordCloud(width=800, height=400).generate_from_frequencies(keywords)
-    plt.figure(figsize=(10, 5))
-    plt.imshow(wordcloud, interpolation='bilinear')
-    plt.axis('off')
-    return plt
-
 def main():
     st.set_page_config(page_title="SEOtron 3000: The Galactic Web Analyzer", layout="wide", page_icon="icon.png")
     st.title("SEOtron 3000: The Galactic Web Analyzer")
@@ -281,9 +270,15 @@ def main():
     if 'results' not in st.session_state:
         st.session_state.results = []
 
-    if st.button("Launch Analysis") or st.button("Retry Failed URLs"):
-        if urls or st.button("Retry Failed URLs"):
-            if st.button("Retry Failed URLs"):
+    col1, col2 = st.columns(2)
+    with col1:
+        launch = st.button("Launch Analysis")
+    with col2:
+        retry = st.button("Retry Failed URLs")
+
+    if launch or retry:
+        if urls or retry:
+            if retry:
                 urls = [r['url'] for r in st.session_state.results if r['status'] != "Success"]
             urls = [preprocess_url(url) for url in urls]
             if len(urls) > 10:
@@ -425,52 +420,37 @@ def main():
                 """)
 
             with tabs[1]:
-                st.subheader("Core Metrics")
+                st.subheader("Main Table")
                 display_columns = [
                     'url', 'status', 'load_time_ms', 'word_count', 'flesch_reading_ease', 'flesch_kincaid_grade', 'gunning_fog',
                     'internal_link_count', 'external_link_count', 'image_count', 'mobile_friendly', 'canonical_url', 'robots_txt_status',
                     'meta_title', 'meta_description', 'h1_count', 'h2_count', 'h3_count', 'h4_count', 'h5_count', 'h6_count', 'seo_score'
                 ]
-                gb = GridOptionsBuilder.from_dataframe(df[display_columns])
-                gb.configure_pagination()
-                gb.configure_side_bar()
-                AgGrid(df[display_columns], gridOptions=gb.build(), height=400, fit_columns_on_grid_load=True)
+                st.dataframe(df[display_columns])
                 st.download_button("Download Core Metrics", df[display_columns].to_csv(index=False).encode('utf-8'), "core_metrics.csv", "text/csv")
 
             with tabs[2]:
                 st.subheader("Internal Hyperlinks")
                 internal_links_df = pd.DataFrame(internal_links_data)
-                gb = GridOptionsBuilder.from_dataframe(internal_links_df)
-                gb.configure_pagination()
-                gb.configure_side_bar()
-                AgGrid(internal_links_df, gridOptions=gb.build(), height=400, fit_columns_on_grid_load=True)
+                st.dataframe(internal_links_df)
                 st.download_button("Download Internal Links", internal_links_df.to_csv(index=False).encode('utf-8'), "internal_links.csv", "text/csv")
 
             with tabs[3]:
                 st.subheader("External Hyperlinks")
                 external_links_df = pd.DataFrame(external_links_data)
-                gb = GridOptionsBuilder.from_dataframe(external_links_df)
-                gb.configure_pagination()
-                gb.configure_side_bar()
-                AgGrid(external_links_df, gridOptions=gb.build(), height=400, fit_columns_on_grid_load=True)
+                st.dataframe(external_links_df)
                 st.download_button("Download External Links", external_links_df.to_csv(index=False).encode('utf-8'), "external_links.csv", "text/csv")
 
             with tabs[4]:
                 st.subheader("Headings (H1-H6)")
                 headings_df = pd.DataFrame(headings_data)
-                gb = GridOptionsBuilder.from_dataframe(headings_df)
-                gb.configure_pagination()
-                gb.configure_side_bar()
-                AgGrid(headings_df, gridOptions=gb.build(), height=400, fit_columns_on_grid_load=True)
+                st.dataframe(headings_df)
                 st.download_button("Download Headings", headings_df.to_csv(index=False).encode('utf-8'), "headings.csv", "text/csv")
 
             with tabs[5]:
                 st.subheader("Image SEO Scan")
                 images_df = pd.DataFrame(images_data)
-                gb = GridOptionsBuilder.from_dataframe(images_df)
-                gb.configure_pagination()
-                gb.configure_side_bar()
-                AgGrid(images_df, gridOptions=gb.build(), height=400, fit_columns_on_grid_load=True)
+                st.dataframe(images_df)
                 st.download_button("Download Image Data", images_df.to_csv(index=False).encode('utf-8'), "images.csv", "text/csv")
 
             with tabs[6]:
