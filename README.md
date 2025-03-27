@@ -61,31 +61,31 @@ Add it to your system PATH or place it in the project directory.
 5. Run the application
 streamlit run seotron_3000.py
 
-Usage
-Launch SEOtron 3000:
+## Usage
+1. Launch SEOtron 3000:
 After running the command above, the app opens in your default browser at http://localhost:8501.
-Input URLs:
+2. Input URLs:
 Enter up to 10 URLs (one per line) in the text area.
-Configure Settings (Sidebar):
+3. Configure Settings (Sidebar):
 Check "Full Render Load Time" for Selenium-based analysis (requires ChromeDriver).
 Add comma-separated target keywords to analyze their densities.
-Analyze:
+4. Analyze:
 Click "Launch Analysis" to start the scan. A progress bar tracks the process.
-Explore Results:
+5. Explore Results:
 Navigate tabs: Summary, Main Table, Internal Links, External Links, Headings, Images, Visualizations.
-Download CSV files for each section.
+6. Download CSV files for each section.
 View keyword clouds and heading charts in the Visualizations tab.
 
-Contributing
+## Contributing
 We welcome contributions from across the galaxy! To contribute:
 
-Fork the repository.
+## Fork the repository.
 Create a feature branch (git checkout -b feature/awesome-improvement).
 Commit your changes (git commit -m "Add awesome improvement").
 Push to the branch (git push origin feature/awesome-improvement).
 Open a pull request.
 
-Troubleshooting
+## Troubleshooting
 Selenium Errors: Ensure ChromeDriver is installed and matches your Chrome version.
 Timeout Issues: Increase the timeout in requests.get() or check your network.
 Missing NLTK Data: Run the app once—it auto-downloads punkt and stopwords.
