@@ -346,16 +346,33 @@ def main():
                         "Excellent" if df['seo_score'].mean() >= 80 else "Good" if df['seo_score'].mean() >= 50 else "Needs Improvement"
                     ],
                     "Color": [
-                        "green" if df['flesch_reading_ease'].mean() >= 70 else "yellow" if df['flesch_reading_ease'].mean() >= 50 else "red",
-                        "green" if df['flesch_kincaid_grade'].mean() <= 7 else "yellow" if df['flesch_kincaid_grade'].mean() <= 10 else "red",
-                        "green" if df['gunning_fog'].mean() <= 8 else "yellow" if df['gunning_fog'].mean() <= 12 else "red",
-                        "green" if df['seo_score'].mean() >= 80 else "yellow" if df['seo_score'].mean() >= 50 else "red"
+                        "green" if df['flesch_reading_ease'].mean() >= 70 else "orange" if df['flesch_reading_ease'].mean() >= 50 else "red",
+                        "green" if df['flesch_kincaid_grade'].mean() <= 7 else "orange" if df['flesch_kincaid_grade'].mean() <= 10 else "red",
+                        "green" if df['gunning_fog'].mean() <= 8 else "orange" if df['gunning_fog'].mean() <= 12 else "red",
+                        "green" if df['seo_score'].mean() >= 80 else "orange" if df['seo_score'].mean() >= 50 else "red"
                     ]
                 }
                 readability_df = pd.DataFrame(readability_data)
-                readability_df['Score'] = readability_df.apply(lambda row: f"<span style='color:{row['Color']}'>{row['Score']}</span>", axis=1)
-                readability_df['Status'] = readability_df.apply(lambda row: f"<span style='color:{row['Color']}'>{row['Status']}</span>", axis=1)
-                st.markdown(readability_df[['Metric', 'Score', 'Status']].to_html(escape=False), unsafe_allow_html=True)
+                readability_df['Score'] = readability_df.apply(lambda row: f"<span style='color:{row['Color']}; font-weight:bold'>{row['Score']}</span>", axis=1)
+                readability_df['Status'] = readability_df.apply(lambda row: f"<span style='color:{row['Color']}; font-weight:bold'>{row['Status']}</span>", axis=1)
+                # Add darker background to the table
+                st.markdown(
+                    f"""
+                    <style>
+                    table {{
+                        background-color: #D3D3D3;
+                        border-collapse: collapse;
+                    }}
+                    th, td {{
+                        padding: 8px;
+                        text-align: left;
+                        border: 1px solid #A9A9A9;
+                    }}
+                    </style>
+                    {readability_df[['Metric', 'Score', 'Status']].to_html(escape=False)}
+                    """,
+                    unsafe_allow_html=True
+                )
 
                 # Keyword Density Recommendations
                 if target_keywords:
@@ -365,15 +382,31 @@ def main():
                         if result['status'] == "Success" and result['keyword_densities']:
                             for kw, density in result['keyword_densities'].items():
                                 recommendation = "Optimal" if 1 <= density <= 2 else "Increase" if density < 1 else "Reduce"
-                                color = "green" if 1 <= density <= 2 else "yellow" if density < 1 else "red"
+                                color = "green" if 1 <= density <= 2 else "orange" if density < 1 else "red"
                                 keyword_data.append({
                                     "URL": result['url'],
                                     "Keyword": kw,
-                                    "Density": f"<span style='color:{color}'>{density:.2f}%</span>",
-                                    "Recommendation": f"<span style='color:{color}'>{recommendation}</span>"
+                                    "Density": f"<span style='color:{color}; font-weight:bold'>{density:.2f}%</span>",
+                                    "Recommendation": f"<span style='color:{color}; font-weight:bold'>{recommendation}</span>"
                                 })
                     if keyword_data:
-                        st.markdown(pd.DataFrame(keyword_data).to_html(escape=False), unsafe_allow_html=True)
+                        st.markdown(
+                            f"""
+                            <style>
+                            table {{
+                                background-color: #D3D3D3;
+                                border-collapse: collapse;
+                            }}
+                            th, td {{
+                                padding: 8px;
+                                text-align: left;
+                                border: 1px solid #A9A9A9;
+                            }}
+                            </style>
+                            {pd.DataFrame(keyword_data).to_html(escape=False)}
+                            """,
+                            unsafe_allow_html=True
+                        )
 
                 # Broken Links
                 broken_internals = [link for link in internal_links_data if isinstance(link['status_code'], int) and link['status_code'] >= 400]
@@ -386,7 +419,23 @@ def main():
                         "Status": ["<span style='color:red'>Issues Detected</span>" if len(broken_internals) > 0 else "No Issues",
                                    "<span style='color:red'>Issues Detected</span>" if len(broken_externals) > 0 else "No Issues"]
                     }
-                    st.markdown(pd.DataFrame(broken_data).to_html(escape=False), unsafe_allow_html=True)
+                    st.markdown(
+                        f"""
+                        <style>
+                        table {{
+                            background-color: #D3D3D3;
+                            border-collapse: collapse;
+                        }}
+                        th, td {{
+                            padding: 8px;
+                            text-align: left;
+                            border: 1px solid #A9A9A9;
+                        }}
+                        </style>
+                        {pd.DataFrame(broken_data).to_html(escape=False)}
+                        """,
+                        unsafe_allow_html=True
+                    )
 
                 # Accessibility Summary
                 st.markdown("#### Accessibility Summary")
@@ -399,7 +448,23 @@ def main():
                             "Heading Issues": "Yes" if result['hierarchy_issues'] else "No",
                             "Status": "<span style='color:red'>Issues Detected</span>" if result['alt_text_missing'] > 0 or result['hierarchy_issues'] else "<span style='color:green'>No Issues</span>"
                         })
-                st.markdown(pd.DataFrame(accessibility_data).to_html(escape=False), unsafe_allow_html=True)
+                st.markdown(
+                    f"""
+                    <style>
+                    table {{
+                        background-color: #D3D3D3;
+                        border-collapse: collapse;
+                    }}
+                    th, td {{
+                        padding: 8px;
+                        text-align: left;
+                        border: 1px solid #A9A9A9;
+                    }}
+                    </style>
+                    {pd.DataFrame(accessibility_data).to_html(escape=False)}
+                    """,
+                    unsafe_allow_html=True
+                )
 
                 # Duplicate Content Similarity
                 if duplicate_matrix is not None:
@@ -409,14 +474,30 @@ def main():
                         for j in range(len(duplicate_matrix[i])):
                             if i < j:
                                 similarity = duplicate_matrix[i][j]
-                                color = "green" if similarity < 0.5 else "yellow" if similarity < 0.8 else "red"
+                                color = "green" if similarity < 0.5 else "orange" if similarity < 0.8 else "red"
                                 duplicate_data.append({
                                     "URL Pair": f"URL {i+1} vs URL {j+1}",
-                                    "Similarity": f"<span style='color:{color}'>{similarity:.2f}</span>",
-                                    "Status": f"<span style='color:{color}'>{'Low' if similarity < 0.5 else 'Moderate' if similarity < 0.8 else 'High'}</span>"
+                                    "Similarity": f"<span style='color:{color}; font-weight:bold'>{similarity:.2f}</span>",
+                                    "Status": f"<span style='color:{color}; font-weight:bold'>{'Low' if similarity < 0.5 else 'Moderate' if similarity < 0.8 else 'High'}</span>"
                                 })
                     if duplicate_data:
-                        st.markdown(pd.DataFrame(duplicate_data).to_html(escape=False), unsafe_allow_html=True)
+                        st.markdown(
+                            f"""
+                            <style>
+                            table {{
+                                background-color: #D3D3D3;
+                                border-collapse: collapse;
+                            }}
+                            th, td {{
+                                padding: 8px;
+                                text-align: left;
+                                border: 1px solid #A9A9A9;
+                            }}
+                            </style>
+                            {pd.DataFrame(duplicate_data).to_html(escape=False)}
+                            """,
+                            unsafe_allow_html=True
+                        )
 
                 # Download Button
                 st.markdown("---")
@@ -429,22 +510,22 @@ def main():
                     st.markdown("""
                     - **Flesch Reading Ease (0-100):** Higher scores = easier to read.  
                       - 70-100: Very Easy (Green)  
-                      - 50-70: Moderate (Yellow)  
+                      - 50-70: Moderate (Orange)  
                       - 0-50: Difficult (Red)  
                     - **Flesch-Kincaid Grade:** U.S. grade level required.  
                       - 5-7: Easy (Green)  
-                      - 8-10: Average (Yellow)  
+                      - 8-10: Average (Orange)  
                       - 11+: Advanced (Red)  
                     - **Gunning Fog:** Education years needed.  
                       - 6-8: Easy (Green)  
-                      - 9-12: Moderate (Yellow)  
+                      - 9-12: Moderate (Orange)  
                       - 13+: Complex (Red)
                     """)
                     st.markdown("##### Duplicate Content Similarity Legend")
                     st.markdown("""
                     - **Cosine Similarity (0-1):** Higher values = more duplication.  
                       - 0.0-0.5: Low (Green)  
-                      - 0.5-0.8: Moderate (Yellow)  
+                      - 0.5-0.8: Moderate (Orange)  
                       - 0.8-1.0: High (Red)
                     """)
 
