@@ -25,7 +25,7 @@ import plotly.express as px
 # Set page config as the first Streamlit command
 st.set_page_config(page_title="SEOtron 3000: The Galactic Web Analyzer", layout="wide", page_icon="icon.png")
 
-# Custom CSS for UI/UX improvements (after set_page_config)
+# Custom CSS for UI/UX improvements
 st.markdown("""
     <style>
     /* General Styling */
@@ -87,25 +87,28 @@ st.markdown("""
         background-color: #D1E7FF;
         color: #212529;
     }
-    /* Table Styling */
-    .stDataFrame table {
+    /* Table Styling for Custom HTML Tables */
+    .custom-table {
         border-collapse: collapse;
         width: 100%;
+        margin-bottom: 20px;
     }
-    .stDataFrame th {
+    .custom-table th {
         background-color: #1E90FF;
         color: white;
         padding: 10px;
         font-weight: 600;
+        text-align: left;
     }
-    .stDataFrame tr:nth-child(even) {
+    .custom-table td {
+        padding: 8px;
+        border-bottom: 1px solid #D1E7FF;
+    }
+    .custom-table tr:nth-child(even) {
         background-color: #F1F3F5;
     }
-    .stDataFrame tr:hover {
+    .custom-table tr:hover {
         background-color: #D1E7FF;
-    }
-    .stDataFrame td {
-        padding: 8px;
     }
     /* Status Badges */
     .badge {
@@ -137,6 +140,26 @@ st.markdown("""
         border: 1px solid #1E90FF;
         border-radius: 8px;
         padding: 10px;
+    }
+    /* DataFrame Table Styling (for other tabs) */
+    .stDataFrame table {
+        border-collapse: collapse;
+        width: 100%;
+    }
+    .stDataFrame th {
+        background-color: #1E90FF;
+        color: white;
+        padding: 10px;
+        font-weight: 600;
+    }
+    .stDataFrame tr:nth-child(even) {
+        background-color: #F1F3F5;
+    }
+    .stDataFrame tr:hover {
+        background-color: #D1E7FF;
+    }
+    .stDataFrame td {
+        padding: 8px;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -384,6 +407,32 @@ def apply_badge(val):
         return f'<span class="badge badge-red">{val}</span>'
     return val
 
+# Function to convert DataFrame to HTML table for rendering badges
+def df_to_html_table(df):
+    # Start the HTML table
+    html = '<table class="custom-table">'
+    
+    # Add header row
+    html += '<tr>'
+    for col in df.columns:
+        html += f'<th>{col}</th>'
+    html += '</tr>'
+    
+    # Add data rows
+    for _, row in df.iterrows():
+        html += '<tr>'
+        for val in row:
+            # If the value is already an HTML string (e.g., a badge), use it directly; otherwise, escape it
+            if isinstance(val, str) and val.startswith('<span class="badge'):
+                html += f'<td>{val}</td>'
+            else:
+                html += f'<td>{val}</td>'
+        html += '</tr>'
+    
+    # Close the table
+    html += '</table>'
+    return html
+
 def main():
     # Header with styling
     st.markdown("""
@@ -495,7 +544,9 @@ def main():
                               f"{df['internal_link_count'].mean():.1f}", f"{df['external_link_count'].mean():.1f}", 
                               f"{df['image_count'].mean():.1f}", f"{df['mobile_friendly'].sum()}", f"{len(df)}"]
                 }
-                st.table(pd.DataFrame(summary_data))
+                summary_df = pd.DataFrame(summary_data)
+                # Convert to HTML table and render
+                st.markdown(df_to_html_table(summary_df), unsafe_allow_html=True)
 
                 # Readability and SEO Scores Table
                 st.markdown("#### 📖 Readability & SEO Scores")
@@ -512,11 +563,9 @@ def main():
                 }
                 readability_df = pd.DataFrame(readability_data)
                 # Apply badge styling to the Status column
-                styled_readability_df = readability_df.style.format(
-                    {"Status": apply_badge},
-                    escape="html"
-                )
-                st.dataframe(styled_readability_df, use_container_width=True)
+                readability_df['Status'] = readability_df['Status'].apply(apply_badge)
+                # Convert to HTML table and render
+                st.markdown(df_to_html_table(readability_df), unsafe_allow_html=True)
 
                 # Keyword Density Recommendations
                 if target_keywords:
@@ -535,14 +584,12 @@ def main():
                     if keyword_data:
                         keyword_df = pd.DataFrame(keyword_data)
                         # Apply badge styling to Density and Recommendation
-                        styled_keyword_df = keyword_df.style.format(
-                            {
-                                "Density": lambda val: f'<span class="badge {"badge-green" if 1 <= float(val.strip('%')) <= 2 else "badge-orange" if float(val.strip('%')) < 1 else "badge-red"}">{val}</span>',
-                                "Recommendation": apply_badge
-                            },
-                            escape="html"
+                        keyword_df['Density'] = keyword_df['Density'].apply(
+                            lambda val: f'<span class="badge {"badge-green" if 1 <= float(val.strip("%")) <= 2 else "badge-orange" if float(val.strip("%")) < 1 else "badge-red"}">{val}</span>'
                         )
-                        st.dataframe(styled_keyword_df, use_container_width=True)
+                        keyword_df['Recommendation'] = keyword_df['Recommendation'].apply(apply_badge)
+                        # Convert to HTML table and render
+                        st.markdown(df_to_html_table(keyword_df), unsafe_allow_html=True)
 
                 # Broken Links
                 broken_internals = [link for link in internal_links_data if isinstance(link['status_code'], int) and link['status_code'] >= 400]
@@ -556,11 +603,9 @@ def main():
                                    "Issues Detected" if len(broken_externals) > 0 else "No Issues"]
                     }
                     broken_df = pd.DataFrame(broken_data)
-                    styled_broken_df = broken_df.style.format(
-                        {"Status": apply_badge},
-                        escape="html"
-                    )
-                    st.dataframe(styled_broken_df, use_container_width=True)
+                    broken_df['Status'] = broken_df['Status'].apply(apply_badge)
+                    # Convert to HTML table and render
+                    st.markdown(df_to_html_table(broken_df), unsafe_allow_html=True)
 
                 # Accessibility Summary
                 st.markdown("#### ♿ Accessibility Summary")
@@ -574,11 +619,9 @@ def main():
                             "Status": "Issues Detected" if result['alt_text_missing'] > 0 or result['hierarchy_issues'] else "No Issues"
                         })
                 accessibility_df = pd.DataFrame(accessibility_data)
-                styled_accessibility_df = accessibility_df.style.format(
-                    {"Status": apply_badge},
-                    escape="html"
-                )
-                st.dataframe(styled_accessibility_df, use_container_width=True)
+                accessibility_df['Status'] = accessibility_df['Status'].apply(apply_badge)
+                # Convert to HTML table and render
+                st.markdown(df_to_html_table(accessibility_df), unsafe_allow_html=True)
 
                 # Duplicate Content Similarity
                 if duplicate_matrix is not None:
@@ -596,14 +639,12 @@ def main():
                                 })
                     if duplicate_data:
                         duplicate_df = pd.DataFrame(duplicate_data)
-                        styled_duplicate_df = duplicate_df.style.format(
-                            {
-                                "Similarity": lambda val: f'<span class="badge {"badge-green" if float(val) < 0.5 else "badge-orange" if float(val) < 0.8 else "badge-red"}">{val}</span>',
-                                "Status": apply_badge
-                            },
-                            escape="html"
+                        duplicate_df['Similarity'] = duplicate_df['Similarity'].apply(
+                            lambda val: f'<span class="badge {"badge-green" if float(val) < 0.5 else "badge-orange" if float(val) < 0.8 else "badge-red"}">{val}</span>'
                         )
-                        st.dataframe(styled_duplicate_df, use_container_width=True)
+                        duplicate_df['Status'] = duplicate_df['Status'].apply(apply_badge)
+                        # Convert to HTML table and render
+                        st.markdown(df_to_html_table(duplicate_df), unsafe_allow_html=True)
 
                 # Download Button
                 st.markdown("---")
