@@ -54,8 +54,8 @@ st.markdown("""
     }
     /* Button Styling */
     .stButton>button {
-        background: linear-gradient(90deg, #6F42C1, #1E90FF);
-        color: white;
+        background: linear-gradient(90deg, #4DA8FF, #00E0FF); /* Brighter gradient: Light Blue to Cyan */
+        color: white; /* Keep text white for contrast */
         border: none;
         border-radius: 8px;
         padding: 10px 20px;
@@ -64,7 +64,7 @@ st.markdown("""
         transition: all 0.3s ease;
     }
     .stButton>button:hover {
-        background: linear-gradient(90deg, #5A32A3, #0D6EFD);
+        background: linear-gradient(90deg, #3B82F6, #00C4E0); /* Slightly darker gradient for hover */
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     }
     /* Tab Styling */
