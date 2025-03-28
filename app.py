@@ -247,7 +247,6 @@ def color_cells(val, color_map=None):
     if color_map:
         color = color_map.get(val, "black")
         return f"color: {color}; font-weight: bold"
-    # For numerical columns, we'll pass the value directly and handle in the apply function
     return None
 
 def color_numerical_cells(val, thresholds, colors):
@@ -596,8 +595,45 @@ def main():
                     link_fig = px.pie(names=['Internal Links', 'External Links'], values=[df['internal_link_count'].sum(), df['external_link_count'].sum()], title="Link Types")
                     st.plotly_chart(link_fig, use_container_width=True)
                     st.write("SEO Score Distribution:")
-                    seo_fig = px.histogram(df, x='seo_score', title="SEO Score Histogram")
+                    # Define color bins for SEO scores
+                    seo_fig = px.histogram(
+                        df,
+                        x='seo_score',
+                        title="SEO Score Histogram",
+                        nbins=10,  # Use 10 bins for better granularity (0-10, 10-20, ..., 90-100)
+                        labels={'seo_score': 'SEO Score', 'count': 'Number of URLs'},
+                        color_discrete_sequence=['red']  # Default color, will override with color_discrete_map
+                    )
+                    # Update layout for better readability
+                    seo_fig.update_layout(
+                        xaxis_title="SEO Score",
+                        yaxis_title="Number of URLs",
+                        bargap=0.1
+                    )
+                    # Add color-coding based on score ranges
+                    seo_fig.update_traces(
+                        marker=dict(
+                            color=[
+                                'green' if score >= 80 else 'orange' if score >= 50 else 'red'
+                                for score in df['seo_score']
+                            ]
+                        )
+                    )
+                    # Add vertical lines for thresholds
+                    seo_fig.add_vline(x=50, line_dash="dash", line_color="black", annotation_text="Needs Improvement", annotation_position="top left")
+                    seo_fig.add_vline(x=80, line_dash="dash", line_color="black", annotation_text="Excellent", annotation_position="top right")
                     st.plotly_chart(seo_fig, use_container_width=True)
+                    # Add a caption explaining the histogram
+                    st.markdown("""
+                    **How to Interpret the SEO Score Histogram:**
+                    - The x-axis shows the SEO score (0-100).
+                    - The y-axis shows the number of URLs with scores in each range.
+                    - **Color Coding:**
+                      - **Red (0-50):** Needs Improvement
+                      - **Orange (50-80):** Good
+                      - **Green (80-100):** Excellent
+                    - Dashed lines mark the thresholds: 50 (Needs Improvement) and 80 (Excellent).
+                    """)
 
 if __name__ == "__main__":
     main()
