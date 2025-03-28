@@ -602,6 +602,7 @@ def main():
                         title="SEO Score Histogram",
                         nbins=10,  # Use 10 bins for better granularity (0-10, 10-20, ..., 90-100)
                         labels={'seo_score': 'SEO Score', 'count': 'Number of URLs'},
+                        custom_data=['url', 'seo_score'],  # Pass URLs and SEO scores for hover
                         color_discrete_sequence=['red']  # Default color, will override with color_discrete_map
                     )
                     # Update layout for better readability
@@ -617,6 +618,14 @@ def main():
                                 'green' if score >= 80 else 'orange' if score >= 50 else 'red'
                                 for score in df['seo_score']
                             ]
+                        ),
+                        # Customize hover template to show bin range, count, and URLs with their exact scores
+                        hovertemplate=(
+                            "<b>SEO Score Range</b>: %{x}<br>" +
+                            "<b>Number of URLs</b>: %{y}<br>" +
+                            "<b>Sites</b>:<br>" +
+                            "%{customdata[0]} (Score: %{customdata[1]})<br>" +
+                            "<extra></extra>"
                         )
                     )
                     # Add vertical lines for thresholds
@@ -633,6 +642,7 @@ def main():
                       - **Orange (50-80):** Good
                       - **Green (80-100):** Excellent
                     - Dashed lines mark the thresholds: 50 (Needs Improvement) and 80 (Excellent).
+                    - **Hover over a bar** to see the specific URLs and their exact SEO scores in that range.
                     """)
 
 if __name__ == "__main__":
