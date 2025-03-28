@@ -242,6 +242,11 @@ def analyze_url(url, target_keywords=None):
 
     return result, text_content
 
+# Styling function for coloring cells in st.dataframe
+def color_cells(val, color_map):
+    color = color_map.get(val, "black")
+    return f"color: {color}; font-weight: bold"
+
 def main():
     st.set_page_config(page_title="SEOtron 3000: The Galactic Web Analyzer", layout="wide", page_icon="icon.png")
     
@@ -344,34 +349,28 @@ def main():
                         "Easy" if df['flesch_kincaid_grade'].mean() <= 7 else "Average" if df['flesch_kincaid_grade'].mean() <= 10 else "Advanced",
                         "Easy" if df['gunning_fog'].mean() <= 8 else "Moderate" if df['gunning_fog'].mean() <= 12 else "Complex",
                         "Excellent" if df['seo_score'].mean() >= 80 else "Good" if df['seo_score'].mean() >= 50 else "Needs Improvement"
-                    ],
-                    "Color": [
-                        "green" if df['flesch_reading_ease'].mean() >= 70 else "orange" if df['flesch_reading_ease'].mean() >= 50 else "red",
-                        "green" if df['flesch_kincaid_grade'].mean() <= 7 else "orange" if df['flesch_kincaid_grade'].mean() <= 10 else "red",
-                        "green" if df['gunning_fog'].mean() <= 8 else "orange" if df['gunning_fog'].mean() <= 12 else "red",
-                        "green" if df['seo_score'].mean() >= 80 else "orange" if df['seo_score'].mean() >= 50 else "red"
                     ]
                 }
                 readability_df = pd.DataFrame(readability_data)
-                readability_df['Score'] = readability_df.apply(lambda row: f"<span style='color:{row['Color']}; font-weight:bold'>{row['Score']}</span>", axis=1)
-                readability_df['Status'] = readability_df.apply(lambda row: f"<span style='color:{row['Color']}; font-weight:bold'>{row['Status']}</span>", axis=1)
-                # Use st.markdown with proper HTML rendering
-                html_content = f"""
-                <style>
-                table {{
-                    background-color: #D3D3D3;
-                    border-collapse: collapse;
-                    width: 100%;
-                }}
-                th, td {{
-                    padding: 8px;
-                    text-align: left;
-                    border: 1px solid #A9A9A9;
-                }}
-                </style>
-                {readability_df[['Metric', 'Score', 'Status']].to_html(index=False, escape=False)}
-                """
-                st.markdown(html_content, unsafe_allow_html=True)
+                # Define color mapping for Status
+                status_color_map = {
+                    "Very Easy": "green",
+                    "Moderate": "orange",
+                    "Difficult": "red",
+                    "Easy": "green",
+                    "Average": "orange",
+                    "Advanced": "red",
+                    "Complex": "red",
+                    "Excellent": "green",
+                    "Good": "orange",
+                    "Needs Improvement": "red"
+                }
+                # Apply styling to the Status column
+                styled_readability_df = readability_df.style.applymap(
+                    lambda val: color_cells(val, status_color_map),
+                    subset=['Status']
+                )
+                st.dataframe(styled_readability_df, use_container_width=True)
 
                 # Keyword Density Recommendations
                 if target_keywords:
@@ -381,31 +380,33 @@ def main():
                         if result['status'] == "Success" and result['keyword_densities']:
                             for kw, density in result['keyword_densities'].items():
                                 recommendation = "Optimal" if 1 <= density <= 2 else "Increase" if density < 1 else "Reduce"
-                                color = "green" if 1 <= density <= 2 else "orange" if density < 1 else "red"
                                 keyword_data.append({
                                     "URL": result['url'],
                                     "Keyword": kw,
-                                    "Density": f"<span style='color:{color}; font-weight:bold'>{density:.2f}%</span>",
-                                    "Recommendation": f"<span style='color:{color}; font-weight:bold'>{recommendation}</span>"
+                                    "Density": f"{density:.2f}%",
+                                    "Recommendation": recommendation
                                 })
                     if keyword_data:
                         keyword_df = pd.DataFrame(keyword_data)
-                        html_content = f"""
-                        <style>
-                        table {{
-                            background-color: #D3D3D3;
-                            border-collapse: collapse;
-                            width: 100%;
-                        }}
-                        th, td {{
-                            padding: 8px;
-                            text-align: left;
-                            border: 1px solid #A9A9A9;
-                        }}
-                        </style>
-                        {keyword_df.to_html(index=False, escape=False)}
-                        """
-                        st.markdown(html_content, unsafe_allow_html=True)
+                        # Define color mapping for Density and Recommendation
+                        density_color_map = {
+                            density: "green" if 1 <= float(density.strip('%')) <= 2 else "orange" if float(density.strip('%')) < 1 else "red"
+                            for density in keyword_df['Density']
+                        }
+                        recommendation_color_map = {
+                            "Optimal": "green",
+                            "Increase": "orange",
+                            "Reduce": "red"
+                        }
+                        # Apply styling to Density and Recommendation columns
+                        styled_keyword_df = keyword_df.style.applymap(
+                            lambda val: color_cells(val, density_color_map),
+                            subset=['Density']
+                        ).applymap(
+                            lambda val: color_cells(val, recommendation_color_map),
+                            subset=['Recommendation']
+                        )
+                        st.dataframe(styled_keyword_df, use_container_width=True)
 
                 # Broken Links
                 broken_internals = [link for link in internal_links_data if isinstance(link['status_code'], int) and link['status_code'] >= 400]
@@ -415,26 +416,20 @@ def main():
                     broken_data = {
                         "Type": ["Internal", "External"],
                         "Count": [len(broken_internals), len(broken_externals)],
-                        "Status": ["<span style='color:red'>Issues Detected</span>" if len(broken_internals) > 0 else "No Issues",
-                                   "<span style='color:red'>Issues Detected</span>" if len(broken_externals) > 0 else "No Issues"]
+                        "Status": ["Issues Detected" if len(broken_internals) > 0 else "No Issues",
+                                   "Issues Detected" if len(broken_externals) > 0 else "No Issues"]
                     }
                     broken_df = pd.DataFrame(broken_data)
-                    html_content = f"""
-                    <style>
-                    table {{
-                        background-color: #D3D3D3;
-                        border-collapse: collapse;
-                        width: 100%;
-                    }}
-                    th, td {{
-                        padding: 8px;
-                        text-align: left;
-                        border: 1px solid #A9A9A9;
-                    }}
-                    </style>
-                    {broken_df.to_html(index=False, escape=False)}
-                    """
-                    st.markdown(html_content, unsafe_allow_html=True)
+                    # Define color mapping for Status
+                    broken_status_color_map = {
+                        "Issues Detected": "red",
+                        "No Issues": "green"
+                    }
+                    styled_broken_df = broken_df.style.applymap(
+                        lambda val: color_cells(val, broken_status_color_map),
+                        subset=['Status']
+                    )
+                    st.dataframe(styled_broken_df, use_container_width=True)
 
                 # Accessibility Summary
                 st.markdown("#### Accessibility Summary")
@@ -445,25 +440,19 @@ def main():
                             "URL": result['url'],
                             "Images Missing Alt Text": result['alt_text_missing'],
                             "Heading Issues": "Yes" if result['hierarchy_issues'] else "No",
-                            "Status": "<span style='color:red'>Issues Detected</span>" if result['alt_text_missing'] > 0 or result['hierarchy_issues'] else "<span style='color:green'>No Issues</span>"
+                            "Status": "Issues Detected" if result['alt_text_missing'] > 0 or result['hierarchy_issues'] else "No Issues"
                         })
                 accessibility_df = pd.DataFrame(accessibility_data)
-                html_content = f"""
-                <style>
-                table {{
-                    background-color: #D3D3D3;
-                    border-collapse: collapse;
-                    width: 100%;
-                }}
-                th, td {{
-                    padding: 8px;
-                    text-align: left;
-                    border: 1px solid #A9A9A9;
-                }}
-                </style>
-                {accessibility_df.to_html(index=False, escape=False)}
-                """
-                st.markdown(html_content, unsafe_allow_html=True)
+                # Define color mapping for Status
+                accessibility_status_color_map = {
+                    "Issues Detected": "red",
+                    "No Issues": "green"
+                }
+                styled_accessibility_df = accessibility_df.style.applymap(
+                    lambda val: color_cells(val, accessibility_status_color_map),
+                    subset=['Status']
+                )
+                st.dataframe(styled_accessibility_df, use_container_width=True)
 
                 # Duplicate Content Similarity
                 if duplicate_matrix is not None:
@@ -473,30 +462,32 @@ def main():
                         for j in range(len(duplicate_matrix[i])):
                             if i < j:
                                 similarity = duplicate_matrix[i][j]
-                                color = "green" if similarity < 0.5 else "orange" if similarity < 0.8 else "red"
+                                status = "Low" if similarity < 0.5 else "Moderate" if similarity < 0.8 else "High"
                                 duplicate_data.append({
                                     "URL Pair": f"URL {i+1} vs URL {j+1}",
-                                    "Similarity": f"<span style='color:{color}; font-weight:bold'>{similarity:.2f}</span>",
-                                    "Status": f"<span style='color:{color}; font-weight:bold'>{'Low' if similarity < 0.5 else 'Moderate' if similarity < 0.8 else 'High'}</span>"
+                                    "Similarity": f"{similarity:.2f}",
+                                    "Status": status
                                 })
                     if duplicate_data:
                         duplicate_df = pd.DataFrame(duplicate_data)
-                        html_content = f"""
-                        <style>
-                        table {{
-                            background-color: #D3D3D3;
-                            border-collapse: collapse;
-                            width: 100%;
-                        }}
-                        th, td {{
-                            padding: 8px;
-                            text-align: left;
-                            border: 1px solid #A9A9A9;
-                        }}
-                        </style>
-                        {duplicate_df.to_html(index=False, escape=False)}
-                        """
-                        st.markdown(html_content, unsafe_allow_html=True)
+                        # Define color mapping for Similarity and Status
+                        similarity_color_map = {
+                            sim: "green" if float(sim) < 0.5 else "orange" if float(sim) < 0.8 else "red"
+                            for sim in duplicate_df['Similarity']
+                        }
+                        status_color_map = {
+                            "Low": "green",
+                            "Moderate": "orange",
+                            "High": "red"
+                        }
+                        styled_duplicate_df = duplicate_df.style.applymap(
+                            lambda val: color_cells(val, similarity_color_map),
+                            subset=['Similarity']
+                        ).applymap(
+                            lambda val: color_cells(val, status_color_map),
+                            subset=['Status']
+                        )
+                        st.dataframe(styled_duplicate_df, use_container_width=True)
 
                 # Download Button
                 st.markdown("---")
