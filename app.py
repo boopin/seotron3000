@@ -355,24 +355,23 @@ def main():
                 readability_df = pd.DataFrame(readability_data)
                 readability_df['Score'] = readability_df.apply(lambda row: f"<span style='color:{row['Color']}; font-weight:bold'>{row['Score']}</span>", axis=1)
                 readability_df['Status'] = readability_df.apply(lambda row: f"<span style='color:{row['Color']}; font-weight:bold'>{row['Status']}</span>", axis=1)
-                # Add darker background to the table
-                st.markdown(
-                    f"""
-                    <style>
-                    table {{
-                        background-color: #D3D3D3;
-                        border-collapse: collapse;
-                    }}
-                    th, td {{
-                        padding: 8px;
-                        text-align: left;
-                        border: 1px solid #A9A9A9;
-                    }}
-                    </style>
-                    {readability_df[['Metric', 'Score', 'Status']].to_html(escape=False)}
-                    """,
-                    unsafe_allow_html=True
-                )
+                # Use st.markdown with proper HTML rendering
+                html_content = f"""
+                <style>
+                table {{
+                    background-color: #D3D3D3;
+                    border-collapse: collapse;
+                    width: 100%;
+                }}
+                th, td {{
+                    padding: 8px;
+                    text-align: left;
+                    border: 1px solid #A9A9A9;
+                }}
+                </style>
+                {readability_df[['Metric', 'Score', 'Status']].to_html(index=False, escape=False)}
+                """
+                st.markdown(html_content, unsafe_allow_html=True)
 
                 # Keyword Density Recommendations
                 if target_keywords:
@@ -390,23 +389,23 @@ def main():
                                     "Recommendation": f"<span style='color:{color}; font-weight:bold'>{recommendation}</span>"
                                 })
                     if keyword_data:
-                        st.markdown(
-                            f"""
-                            <style>
-                            table {{
-                                background-color: #D3D3D3;
-                                border-collapse: collapse;
-                            }}
-                            th, td {{
-                                padding: 8px;
-                                text-align: left;
-                                border: 1px solid #A9A9A9;
-                            }}
-                            </style>
-                            {pd.DataFrame(keyword_data).to_html(escape=False)}
-                            """,
-                            unsafe_allow_html=True
-                        )
+                        keyword_df = pd.DataFrame(keyword_data)
+                        html_content = f"""
+                        <style>
+                        table {{
+                            background-color: #D3D3D3;
+                            border-collapse: collapse;
+                            width: 100%;
+                        }}
+                        th, td {{
+                            padding: 8px;
+                            text-align: left;
+                            border: 1px solid #A9A9A9;
+                        }}
+                        </style>
+                        {keyword_df.to_html(index=False, escape=False)}
+                        """
+                        st.markdown(html_content, unsafe_allow_html=True)
 
                 # Broken Links
                 broken_internals = [link for link in internal_links_data if isinstance(link['status_code'], int) and link['status_code'] >= 400]
@@ -419,23 +418,23 @@ def main():
                         "Status": ["<span style='color:red'>Issues Detected</span>" if len(broken_internals) > 0 else "No Issues",
                                    "<span style='color:red'>Issues Detected</span>" if len(broken_externals) > 0 else "No Issues"]
                     }
-                    st.markdown(
-                        f"""
-                        <style>
-                        table {{
-                            background-color: #D3D3D3;
-                            border-collapse: collapse;
-                        }}
-                        th, td {{
-                            padding: 8px;
-                            text-align: left;
-                            border: 1px solid #A9A9A9;
-                        }}
-                        </style>
-                        {pd.DataFrame(broken_data).to_html(escape=False)}
-                        """,
-                        unsafe_allow_html=True
-                    )
+                    broken_df = pd.DataFrame(broken_data)
+                    html_content = f"""
+                    <style>
+                    table {{
+                        background-color: #D3D3D3;
+                        border-collapse: collapse;
+                        width: 100%;
+                    }}
+                    th, td {{
+                        padding: 8px;
+                        text-align: left;
+                        border: 1px solid #A9A9A9;
+                    }}
+                    </style>
+                    {broken_df.to_html(index=False, escape=False)}
+                    """
+                    st.markdown(html_content, unsafe_allow_html=True)
 
                 # Accessibility Summary
                 st.markdown("#### Accessibility Summary")
@@ -448,23 +447,23 @@ def main():
                             "Heading Issues": "Yes" if result['hierarchy_issues'] else "No",
                             "Status": "<span style='color:red'>Issues Detected</span>" if result['alt_text_missing'] > 0 or result['hierarchy_issues'] else "<span style='color:green'>No Issues</span>"
                         })
-                st.markdown(
-                    f"""
-                    <style>
-                    table {{
-                        background-color: #D3D3D3;
-                        border-collapse: collapse;
-                    }}
-                    th, td {{
-                        padding: 8px;
-                        text-align: left;
-                        border: 1px solid #A9A9A9;
-                    }}
-                    </style>
-                    {pd.DataFrame(accessibility_data).to_html(escape=False)}
-                    """,
-                    unsafe_allow_html=True
-                )
+                accessibility_df = pd.DataFrame(accessibility_data)
+                html_content = f"""
+                <style>
+                table {{
+                    background-color: #D3D3D3;
+                    border-collapse: collapse;
+                    width: 100%;
+                }}
+                th, td {{
+                    padding: 8px;
+                    text-align: left;
+                    border: 1px solid #A9A9A9;
+                }}
+                </style>
+                {accessibility_df.to_html(index=False, escape=False)}
+                """
+                st.markdown(html_content, unsafe_allow_html=True)
 
                 # Duplicate Content Similarity
                 if duplicate_matrix is not None:
@@ -481,23 +480,23 @@ def main():
                                     "Status": f"<span style='color:{color}; font-weight:bold'>{'Low' if similarity < 0.5 else 'Moderate' if similarity < 0.8 else 'High'}</span>"
                                 })
                     if duplicate_data:
-                        st.markdown(
-                            f"""
-                            <style>
-                            table {{
-                                background-color: #D3D3D3;
-                                border-collapse: collapse;
-                            }}
-                            th, td {{
-                                padding: 8px;
-                                text-align: left;
-                                border: 1px solid #A9A9A9;
-                            }}
-                            </style>
-                            {pd.DataFrame(duplicate_data).to_html(escape=False)}
-                            """,
-                            unsafe_allow_html=True
-                        )
+                        duplicate_df = pd.DataFrame(duplicate_data)
+                        html_content = f"""
+                        <style>
+                        table {{
+                            background-color: #D3D3D3;
+                            border-collapse: collapse;
+                            width: 100%;
+                        }}
+                        th, td {{
+                            padding: 8px;
+                            text-align: left;
+                            border: 1px solid #A9A9A9;
+                        }}
+                        </style>
+                        {duplicate_df.to_html(index=False, escape=False)}
+                        """
+                        st.markdown(html_content, unsafe_allow_html=True)
 
                 # Download Button
                 st.markdown("---")
