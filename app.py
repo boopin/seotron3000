@@ -328,6 +328,9 @@ def main():
             st.session_state.results = results
             df = pd.DataFrame(results)
 
+            # Add a column for shortened URLs (domain only) for x-axis labels
+            df['short_url'] = df['url'].apply(lambda x: urlparse(x).netloc)
+
             # Add status columns for readability scores
             df['flesch_reading_ease_status'] = df['flesch_reading_ease'].apply(
                 lambda x: "Very Easy" if x >= 70 else "Moderate" if x >= 50 else "Difficult"
@@ -598,13 +601,14 @@ def main():
                     # Use a bar chart to show individual SEO scores for each URL
                     seo_fig = px.bar(
                         df,
-                        x='url',
+                        x='short_url',  # Use shortened URLs for x-axis labels
                         y='seo_score',
                         title="SEO Scores by URL",
-                        labels={'seo_score': 'SEO Score', 'url': 'URL'},
+                        labels={'seo_score': 'SEO Score', 'short_url': 'URL'},
                         color='seo_score',
                         color_continuous_scale=['red', 'orange', 'green'],
-                        range_color=[0, 100]
+                        range_color=[0, 100],
+                        custom_data=['url']  # Pass the full URL for hover information
                     )
                     # Update layout for better readability and aesthetics
                     seo_fig.update_layout(
@@ -612,21 +616,22 @@ def main():
                         yaxis_title="SEO Score",
                         xaxis_tickangle=45,  # Rotate x-axis labels for better readability
                         height=600,  # Increase chart height for better visibility
+                        margin=dict(r=100),  # Add right margin to create space for the color scale
                         yaxis=dict(
                             gridcolor='lightgray',  # Add grid lines for reference
                             range=[0, 100]  # Ensure y-axis always goes from 0 to 100
                         ),
                         coloraxis_colorbar=dict(
                             title="SEO Score",  # Add a title to the color scale
-                            x=0.95,  # Position the color scale to the left of the default position
-                            xanchor="right",  # Anchor the color scale to the right
+                            x=1.05,  # Position the color scale outside the chart area
+                            xanchor="left",  # Anchor the color scale to the left
                             yanchor="middle",  # Center the color scale vertically
                             len=0.5  # Shorten the color scale to avoid overlap with annotations
                         )
                     )
-                    # Customize hover template to show URL and SEO score
+                    # Customize hover template to show the full URL and SEO score
                     seo_fig.update_traces(
-                        hovertemplate="<b>URL</b>: %{x}<br><b>SEO Score</b>: %{y}<extra></extra>"
+                        hovertemplate="<b>URL</b>: %{customdata[0]}<br><b>SEO Score</b>: %{y}<extra></extra>"
                     )
                     # Add horizontal lines for thresholds with adjusted annotations
                     seo_fig.add_hline(
@@ -661,14 +666,14 @@ def main():
                     # Add a caption explaining the chart
                     st.markdown("""
                     **How to Interpret the SEO Scores by URL Chart:**
-                    - The x-axis shows each analyzed URL.
+                    - The x-axis shows the domain of each analyzed URL (shortened for readability).
                     - The y-axis shows the SEO score (0-100) for each URL.
                     - **Color Coding:**
                       - **Red (0-50):** Needs Improvement
                       - **Orange (50-80):** Good
                       - **Green (80-100):** Excellent
                     - Dashed lines mark the thresholds: 50 (Needs Improvement) and 80 (Excellent).
-                    - **Hover over a bar** to see the URL and its exact SEO score.
+                    - **Hover over a bar** to see the full URL and its exact SEO score.
                     - The color scale on the right indicates the SEO score range.
                     """)
 
