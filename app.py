@@ -1,5 +1,5 @@
 """
-SEOtron 3000: The Galactic Web Analyzer
+SEOtron 3000: Advanced Web Analysis Solution
 Version: 3.0
 Updated: March 2025
 Description: A comprehensive SEO analysis tool by xAI, scanning webpages for meta tags, headings, links, readability, image SEO, mobile readiness, and more.
@@ -23,7 +23,7 @@ from concurrent.futures import ThreadPoolExecutor
 import plotly.express as px
 
 # Set page config as the first Streamlit command
-st.set_page_config(page_title="SEOtron 3000: The Galactic Web Analyzer", layout="wide", page_icon="icon.png")
+st.set_page_config(page_title="SEOtron 3000: Advanced Web Analysis Solution", layout="wide", page_icon="icon.png")
 
 # Custom CSS for UI/UX improvements
 st.markdown("""
@@ -434,10 +434,10 @@ def df_to_html_table(df):
     return html
 
 def main():
-    # Header with styling
+    # Header with updated tagline
     st.markdown("""
-        <h1 style='text-align: center; color: #1E90FF;'>🚀 SEOtron 3000: The Galactic Web Analyzer</h1>
-        <p style='text-align: center; font-style: italic; color: #6F42C1;'>Scanning the digital cosmos with laser precision</p>
+        <h1 style='text-align: center; color: #1E90FF;'>🚀 SEOtron 3000: Advanced Web Analysis Solution</h1>
+        <p style='text-align: center; font-style: italic; color: #6F42C1;'>Delivering Precision Insights for Digital Excellence</p>
     """, unsafe_allow_html=True)
 
     # Sidebar
@@ -684,25 +684,28 @@ def main():
                     'meta_title', 'meta_description', 'h1_count', 'h2_count', 'h3_count', 'h4_count', 'h5_count', 'h6_count', 'seo_score',
                     'flesch_reading_ease_status', 'flesch_kincaid_grade_status', 'gunning_fog_status'
                 ]
-                # Define styling for readability scores
-                styled_df = df[display_columns].style.apply(
-                    lambda x: [color_numerical_cells(val, [(50, "red"), (70, "orange")], ["green"]) for val in x],
-                    subset=['flesch_reading_ease']
-                ).apply(
-                    lambda x: [color_numerical_cells(val, [(7, "green"), (10, "orange")], ["red"]) for val in x],
-                    subset=['flesch_kincaid_grade']
-                ).apply(
-                    lambda x: [color_numerical_cells(val, [(8, "green"), (12, "orange")], ["red"]) for val in x],
-                    subset=['gunning_fog']
-                ).format(
-                    {
-                        "flesch_reading_ease_status": apply_badge,
-                        "flesch_kincaid_grade_status": apply_badge,
-                        "gunning_fog_status": apply_badge
-                    },
-                    escape="html"
-                )
-                st.dataframe(styled_df, use_container_width=True)
+                # Prepare the DataFrame for display
+                main_df = df[display_columns].copy()
+                # Apply badge styling to the status columns
+                main_df['flesch_reading_ease_status'] = main_df['flesch_reading_ease_status'].apply(apply_badge)
+                main_df['flesch_kincaid_grade_status'] = main_df['flesch_kincaid_grade_status'].apply(apply_badge)
+                main_df['gunning_fog_status'] = main_df['gunning_fog_status'].apply(apply_badge)
+                # Apply numerical coloring to readability scores
+                def apply_numerical_coloring(df, column, thresholds, colors):
+                    for idx, val in df[column].items():
+                        for threshold, color in thresholds:
+                            if val <= threshold:
+                                df.at[idx, column] = f'<span style="color: {color}; font-weight: bold">{val}</span>'
+                                break
+                        else:
+                            df.at[idx, column] = f'<span style="color: {colors[-1]}; font-weight: bold">{val}</span>'
+                    return df
+
+                main_df = apply_numerical_coloring(main_df, 'flesch_reading_ease', [(50, "red"), (70, "orange")], ["green"])
+                main_df = apply_numerical_coloring(main_df, 'flesch_kincaid_grade', [(7, "green"), (10, "orange")], ["red"])
+                main_df = apply_numerical_coloring(main_df, 'gunning_fog', [(8, "green"), (12, "orange")], ["red"])
+                # Convert to HTML table and render
+                st.markdown(df_to_html_table(main_df), unsafe_allow_html=True)
                 st.download_button("📥 Download Core Metrics", df[display_columns].to_csv(index=False).encode('utf-8'), "core_metrics.csv", "text/csv", use_container_width=True)
 
             with tabs[2]:
