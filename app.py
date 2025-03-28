@@ -285,6 +285,67 @@ def check_robots_txt(url):
     except:
         return "Error"
 
+def check_robots_block(url, robots_txt_status, soup_url_path):
+    if robots_txt_status == "Not Found" or robots_txt_status == "Error":
+        return "Unknown (robots.txt not accessible)"
+    domain = urlparse(url).netloc
+    robots_url = f"https://{domain}/robots.txt"
+    try:
+        response = requests.get(robots_url, timeout=3)
+        if response.status_code != 200:
+            return "Unknown (robots.txt fetch failed)"
+        robots_content = response.text.lower()
+        # Simple check for disallow rules affecting the URL path
+        for line in robots_content.split('\n'):
+            if line.startswith('disallow:'):
+                disallowed_path = line.split('disallow:')[1].strip().lower()
+                if disallowed_path and soup_url_path.lower().startswith(disallowed_path):
+                    return "Blocked by robots.txt"
+        return "Not Blocked"
+    except:
+        return "Error"
+
+def check_https(url, soup):
+    # Check if the URL uses HTTPS
+    protocol = urlparse(url).scheme
+    https_status = "Uses HTTPS" if protocol == "https" else "HTTP (Insecure)"
+    
+    # Check for mixed content if the page uses HTTPS
+    mixed_content_issues = []
+    if protocol == "https":
+        # Look for HTTP resources (images, scripts, stylesheets)
+        for tag, attr in [('img', 'src'), ('script', 'src'), ('link', 'href')]:
+            for element in soup.find_all(tag):
+                resource_url = element.get(attr, '')
+                if resource_url and urlparse(resource_url).scheme == 'http':
+                    mixed_content_issues.append(f"{tag} with URL: {resource_url}")
+    
+    if mixed_content_issues:
+        https_status += f" | Mixed Content Detected ({len(mixed_content_issues)} issues)"
+    return https_status, mixed_content_issues
+
+def check_indexability(soup, url, robots_txt_status):
+    # Check for noindex meta tag
+    noindex_tag = soup.find('meta', attrs={'name': 'robots', 'content': lambda x: x and 'noindex' in x.lower()})
+    if noindex_tag:
+        return "Noindex Tag Detected"
+    
+    # Check if blocked by robots.txt
+    soup_url_path = urlparse(url).path
+    robots_block_status = check_robots_block(url, robots_txt_status, soup_url_path)
+    if "Blocked" in robots_block_status:
+        return robots_block_status
+    
+    # Check for login requirement (e.g., 401 Unauthorized)
+    try:
+        response = requests.get(url, timeout=5)
+        if response.status_code == 401:
+            return "Login Required (401 Unauthorized)"
+    except:
+        pass  # If request fails, we already handle it in the main analysis
+    
+    return "Indexable"
+
 def detect_duplicates(contents):
     if len(contents) < 2:
         return None
@@ -307,6 +368,14 @@ def calculate_seo_score(result):
     score += link_score
     image_score = min(result['image_count'] / 5, 1) * 20 if all(img['has_alt'] for img in result['images']) else 10
     score += image_score
+    # Deduct points for HTTPS issues
+    if "HTTP (Insecure)" in result['https_status']:
+        score -= 10
+    if "Mixed Content Detected" in result['https_status']:
+        score -= 5
+    # Deduct points for indexability issues
+    if result['indexability_status'] != "Indexable":
+        score -= 15
     return min(round(score), 100)
 
 def analyze_url(url, target_keywords=None):
@@ -328,7 +397,10 @@ def analyze_url(url, target_keywords=None):
         'robots_txt_status': '',
         'seo_score': 0,
         'hierarchy_issues': False,
-        'alt_text_missing': 0
+        'alt_text_missing': 0,
+        'https_status': '',
+        'mixed_content_issues': [],
+        'indexability_status': ''
     }
     try:
         st.write(f"Fetching {url}...")
@@ -372,6 +444,14 @@ def analyze_url(url, target_keywords=None):
         result['canonical_url'] = check_canonical(soup)
         result['robots_txt_status'] = check_robots_txt(url)
 
+        # HTTPS and Security Checks
+        https_status, mixed_content_issues = check_https(url, soup)
+        result['https_status'] = https_status
+        result['mixed_content_issues'] = mixed_content_issues
+
+        # Indexability Check
+        result['indexability_status'] = check_indexability(soup, url, result['robots_txt_status'])
+
         keywords, densities = extract_keywords(text_content, target_keywords=target_keywords)
         result['keywords'] = keywords
         result['keyword_densities'] = densities
@@ -399,11 +479,11 @@ def color_numerical_cells(val, thresholds, colors):
 
 # Function to apply badge styling to status columns
 def apply_badge(val):
-    if val in ["Very Easy", "Easy", "Low", "No Issues", "Excellent", "Optimal"]:
+    if val in ["Very Easy", "Easy", "Low", "No Issues", "Excellent", "Optimal", "Uses HTTPS", "Indexable"]:
         return f'<span class="badge badge-green">{val}</span>'
-    elif val in ["Moderate", "Average", "Good", "Increase"]:
+    elif val in ["Moderate", "Average", "Good", "Increase", "Unknown (robots.txt not accessible)"]:
         return f'<span class="badge badge-orange">{val}</span>'
-    elif val in ["Difficult", "Advanced", "Complex", "High", "Issues Detected", "Needs Improvement", "Reduce"]:
+    elif val in ["Difficult", "Advanced", "Complex", "High", "Issues Detected", "Needs Improvement", "Reduce", "HTTP (Insecure)", "Noindex Tag Detected", "Blocked by robots.txt", "Login Required (401 Unauthorized)"]:
         return f'<span class="badge badge-red">{val}</span>'
     return val
 
@@ -567,6 +647,37 @@ def main():
                 # Convert to HTML table and render
                 st.markdown(df_to_html_table(readability_df), unsafe_allow_html=True)
 
+                # HTTPS and Security Summary
+                st.markdown("#### 🔒 HTTPS and Security Summary")
+                security_data = []
+                for result in results:
+                    if result['status'] == "Success":
+                        security_data.append({
+                            "URL": result['url'],
+                            "HTTPS Status": result['https_status'].split(" | ")[0],
+                            "Mixed Content Issues": len(result['mixed_content_issues']),
+                            "Status": "No Issues" if "Uses HTTPS" in result['https_status'] and not result['mixed_content_issues'] else "Issues Detected"
+                        })
+                security_df = pd.DataFrame(security_data)
+                security_df['HTTPS Status'] = security_df['HTTPS Status'].apply(apply_badge)
+                security_df['Status'] = security_df['Status'].apply(apply_badge)
+                st.markdown(df_to_html_table(security_df), unsafe_allow_html=True)
+
+                # Indexability Summary
+                st.markdown("#### 📇 Indexability Summary")
+                indexability_data = []
+                for result in results:
+                    if result['status'] == "Success":
+                        indexability_data.append({
+                            "URL": result['url'],
+                            "Indexability Status": result['indexability_status'],
+                            "Status": "No Issues" if result['indexability_status'] == "Indexable" else "Issues Detected"
+                        })
+                indexability_df = pd.DataFrame(indexability_data)
+                indexability_df['Indexability Status'] = indexability_df['Indexability Status'].apply(apply_badge)
+                indexability_df['Status'] = indexability_df['Status'].apply(apply_badge)
+                st.markdown(df_to_html_table(indexability_df), unsafe_allow_html=True)
+
                 # Keyword Density Recommendations
                 if target_keywords:
                     st.markdown("#### 🔑 Keyword Density Recommendations")
@@ -682,7 +793,8 @@ def main():
                     'url', 'status', 'load_time_ms', 'word_count', 'flesch_reading_ease', 'flesch_kincaid_grade', 'gunning_fog',
                     'internal_link_count', 'external_link_count', 'image_count', 'mobile_friendly', 'canonical_url', 'robots_txt_status',
                     'meta_title', 'meta_description', 'h1_count', 'h2_count', 'h3_count', 'h4_count', 'h5_count', 'h6_count', 'seo_score',
-                    'flesch_reading_ease_status', 'flesch_kincaid_grade_status', 'gunning_fog_status'
+                    'flesch_reading_ease_status', 'flesch_kincaid_grade_status', 'gunning_fog_status',
+                    'https_status', 'indexability_status'
                 ]
                 # Prepare the DataFrame for display
                 main_df = df[display_columns].copy()
@@ -690,6 +802,8 @@ def main():
                 main_df['flesch_reading_ease_status'] = main_df['flesch_reading_ease_status'].apply(apply_badge)
                 main_df['flesch_kincaid_grade_status'] = main_df['flesch_kincaid_grade_status'].apply(apply_badge)
                 main_df['gunning_fog_status'] = main_df['gunning_fog_status'].apply(apply_badge)
+                main_df['https_status'] = main_df['https_status'].apply(apply_badge)
+                main_df['indexability_status'] = main_df['indexability_status'].apply(apply_badge)
                 # Apply numerical coloring to readability scores
                 def apply_numerical_coloring(df, column, thresholds, colors):
                     for idx, val in df[column].items():
