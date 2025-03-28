@@ -606,19 +606,57 @@ def main():
                         color_continuous_scale=['red', 'orange', 'green'],
                         range_color=[0, 100]
                     )
-                    # Update layout for better readability
+                    # Update layout for better readability and aesthetics
                     seo_fig.update_layout(
                         xaxis_title="URL",
                         yaxis_title="SEO Score",
-                        xaxis_tickangle=45
+                        xaxis_tickangle=45,  # Rotate x-axis labels for better readability
+                        height=600,  # Increase chart height for better visibility
+                        yaxis=dict(
+                            gridcolor='lightgray',  # Add grid lines for reference
+                            range=[0, 100]  # Ensure y-axis always goes from 0 to 100
+                        ),
+                        coloraxis_colorbar=dict(
+                            title="SEO Score",  # Add a title to the color scale
+                            x=0.95,  # Position the color scale to the left of the default position
+                            xanchor="right",  # Anchor the color scale to the right
+                            yanchor="middle",  # Center the color scale vertically
+                            len=0.5  # Shorten the color scale to avoid overlap with annotations
+                        )
                     )
                     # Customize hover template to show URL and SEO score
                     seo_fig.update_traces(
                         hovertemplate="<b>URL</b>: %{x}<br><b>SEO Score</b>: %{y}<extra></extra>"
                     )
-                    # Add horizontal lines for thresholds
-                    seo_fig.add_hline(y=50, line_dash="dash", line_color="black", annotation_text="Needs Improvement", annotation_position="right")
-                    seo_fig.add_hline(y=80, line_dash="dash", line_color="black", annotation_text="Excellent", annotation_position="right")
+                    # Add horizontal lines for thresholds with adjusted annotations
+                    seo_fig.add_hline(
+                        y=50,
+                        line_dash="dash",
+                        line_color="black",
+                        annotation_text="Needs Improvement",
+                        annotation_position="top left",  # Move annotation to top-left to avoid overlap
+                        annotation=dict(
+                            x=0,  # Anchor to the left edge
+                            xanchor="left",
+                            yref="paper",  # Use paper coordinates for y to position relative to the chart
+                            y=0.95,  # Position near the top of the chart
+                            font=dict(size=12, color="black")
+                        )
+                    )
+                    seo_fig.add_hline(
+                        y=80,
+                        line_dash="dash",
+                        line_color="black",
+                        annotation_text="Excellent",
+                        annotation_position="top left",  # Move annotation to top-left to avoid overlap
+                        annotation=dict(
+                            x=0,  # Anchor to the left edge
+                            xanchor="left",
+                            yref="paper",  # Use paper coordinates for y
+                            y=0.90,  # Position just below the "Needs Improvement" annotation
+                            font=dict(size=12, color="black")
+                        )
+                    )
                     st.plotly_chart(seo_fig, use_container_width=True)
                     # Add a caption explaining the chart
                     st.markdown("""
@@ -631,6 +669,7 @@ def main():
                       - **Green (80-100):** Excellent
                     - Dashed lines mark the thresholds: 50 (Needs Improvement) and 80 (Excellent).
                     - **Hover over a bar** to see the URL and its exact SEO score.
+                    - The color scale on the right indicates the SEO score range.
                     """)
 
 if __name__ == "__main__":
