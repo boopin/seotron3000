@@ -22,19 +22,10 @@ from sklearn.metrics.pairwise import cosine_similarity
 from concurrent.futures import ThreadPoolExecutor
 import plotly.express as px
 
-# Pre-download NLTK data
-nltk_data_path = "./nltk_data"
-nltk.data.path.append(nltk_data_path)
-try:
-    nltk.data.find("tokenizers/punkt")
-except LookupError:
-    nltk.download("punkt", download_dir=nltk_data_path)
-try:
-    nltk.data.find("corpora/stopwords")
-except LookupError:
-    nltk.download("stopwords", download_dir=nltk_data_path)
+# Set page config as the first Streamlit command
+st.set_page_config(page_title="SEOtron 3000: The Galactic Web Analyzer", layout="wide", page_icon="icon.png")
 
-# Custom CSS for UI/UX improvements
+# Custom CSS for UI/UX improvements (after set_page_config)
 st.markdown("""
     <style>
     /* General Styling */
@@ -149,6 +140,18 @@ st.markdown("""
     }
     </style>
 """, unsafe_allow_html=True)
+
+# Pre-download NLTK data
+nltk_data_path = "./nltk_data"
+nltk.data.path.append(nltk_data_path)
+try:
+    nltk.data.find("tokenizers/punkt")
+except LookupError:
+    nltk.download("punkt", download_dir=nltk_data_path)
+try:
+    nltk.data.find("corpora/stopwords")
+except LookupError:
+    nltk.download("stopwords", download_dir=nltk_data_path)
 
 # Utility Functions
 def preprocess_url(url):
@@ -354,7 +357,7 @@ def analyze_url(url, target_keywords=None):
 
     except Exception as e:
         result['status'] = f"Error: {str(e)}"
-        st.error(f"Failed to analyze {url}: {str(e)}")
+        st.error(f"❌ Analysis failed for {url}: {str(e)}")
 
     return result, text_content
 
@@ -382,8 +385,6 @@ def apply_badge(val):
     return val
 
 def main():
-    st.set_page_config(page_title="SEOtron 3000: The Galactic Web Analyzer", layout="wide", page_icon="icon.png")
-    
     # Header with styling
     st.markdown("""
         <h1 style='text-align: center; color: #1E90FF;'>🚀 SEOtron 3000: The Galactic Web Analyzer</h1>
