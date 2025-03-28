@@ -44,7 +44,7 @@ def get_load_time(url, retries=2):
     for attempt in range(retries):
         try:
             start_time = time.time()
-            requests.get(url, timeout=5)  # Reduced timeout
+            requests.get(url, timeout=5)
             end_time = time.time()
             return round((end_time - start_time) * 1000)
         except requests.Timeout:
@@ -86,7 +86,7 @@ def extract_headings(soup):
 def extract_internal_links(soup, base_url):
     domain = urlparse(base_url).netloc
     internal_links = []
-    for a in soup.find_all('a', href=True)[:20]:  # Limit to 20 links
+    for a in soup.find_all('a', href=True)[:20]:
         href = urljoin(base_url, a['href'])
         if urlparse(href).netloc == domain:
             try:
@@ -100,7 +100,7 @@ def extract_internal_links(soup, base_url):
 def extract_external_links(soup, base_url):
     domain = urlparse(base_url).netloc
     external_links = []
-    for a in soup.find_all('a', href=True)[:20]:  # Limit to 20 links
+    for a in soup.find_all('a', href=True)[:20]:
         href = urljoin(base_url, a['href'])
         if urlparse(href).netloc and urlparse(href).netloc != domain:
             try:
@@ -112,7 +112,7 @@ def extract_external_links(soup, base_url):
     return external_links
 
 def extract_image_data(soup):
-    images = soup.find_all('img')[:10]  # Limit to 10 images
+    images = soup.find_all('img')[:10]
     image_data = []
     for img in images:
         src = img.get('src', '')
@@ -244,17 +244,24 @@ def analyze_url(url, target_keywords=None):
 
 def main():
     st.set_page_config(page_title="SEOtron 3000: The Galactic Web Analyzer", layout="wide", page_icon="icon.png")
-    st.title("SEOtron 3000: The Galactic Web Analyzer")
-    st.markdown("*Scanning the digital cosmos with laser precision!*")
+    
+    # Header with styling
+    st.markdown("""
+        <h1 style='text-align: center; color: #1E90FF;'>SEOtron 3000: The Galactic Web Analyzer</h1>
+        <p style='text-align: center; font-style: italic;'>Scanning the digital cosmos with laser precision</p>
+    """, unsafe_allow_html=True)
 
-    # Settings
+    # Sidebar
     with st.sidebar:
         st.header("Control Panel")
-        target_keywords = st.text_input("Target Keywords (comma-separated)", "").split(",")
+        target_keywords = st.text_input("Target Keywords (comma-separated)", placeholder="e.g., SEO, web analysis").split(",")
         target_keywords = [kw.strip() for kw in target_keywords if kw.strip()] or None
+        st.markdown("---")
+        st.info("Enter up to 5 URLs to analyze. Results will display in tabs below.")
 
-    # Input URLs
-    urls_input = st.text_area("Enter URLs (one per line, max 5)", height=200)
+    # Input Section
+    st.subheader("Analyze Websites")
+    urls_input = st.text_area("Enter URLs (one per line, max 5)", height=150, placeholder="https://example.com\nhttps://wikipedia.org")
     urls = [url.strip() for url in urls_input.split('\n') if url.strip()]
 
     if 'results' not in st.session_state:
@@ -262,16 +269,16 @@ def main():
 
     col1, col2 = st.columns(2)
     with col1:
-        launch = st.button("Launch Analysis")
+        launch = st.button("Launch Analysis", use_container_width=True)
     with col2:
-        retry = st.button("Retry Failed URLs")
+        retry = st.button("Retry Failed URLs", use_container_width=True)
 
     if launch or retry:
         if urls or retry:
             if retry:
                 urls = [r['url'] for r in st.session_state.results if r['status'] != "Success"]
             urls = [preprocess_url(url) for url in urls]
-            if len(urls) > 5:  # Reduced max URLs
+            if len(urls) > 5:
                 st.warning("Max 5 URLs allowed. Analyzing first 5.")
                 urls = urls[:5]
 
@@ -283,7 +290,7 @@ def main():
             images_data = []
 
             with st.spinner("Analyzing URLs..."):
-                with ThreadPoolExecutor(max_workers=2) as executor:  # Reduced workers
+                with ThreadPoolExecutor(max_workers=2) as executor:
                     future_to_url = {executor.submit(analyze_url, url, target_keywords): url for url in urls}
                     for i, future in enumerate(future_to_url):
                         try:
@@ -310,101 +317,136 @@ def main():
             duplicate_matrix = detect_duplicates(contents)
 
             # Tabs
-            tabs = st.tabs(["Summary", "Main Table", "Internal Hyperlinks", "External Hyperlinks", "Headings", "Images", "Visual Dashboard"])
+            tabs = st.tabs(["Summary", "Main Table", "Internal Links", "External Links", "Headings", "Images", "Visual Dashboard"])
 
             with tabs[0]:
-                st.subheader("Summary")
-                summary = {
-                    "Avg Load Time (ms)": [df['load_time_ms'].mean()],
-                    "Avg Word Count": [df['word_count'].mean()],
-                    "Avg Internal Links": [df['internal_link_count'].mean()],
-                    "Avg External Links": [df['external_link_count'].mean()],
-                    "Avg Flesch Reading Ease": [df['flesch_reading_ease'].mean()],
-                    "Avg Flesch-Kincaid Grade": [df['flesch_kincaid_grade'].mean()],
-                    "Avg Gunning Fog": [df['gunning_fog'].mean()],
-                    "Avg Image Count": [df['image_count'].mean()],
-                    "Mobile-Friendly Sites": [df['mobile_friendly'].sum()],
-                    "Avg SEO Score": [df['seo_score'].mean()],
-                    "Total URLs": [len(df)],
+                st.subheader("Analysis Summary")
+                
+                # Overview Table
+                st.markdown("#### Overview")
+                summary_data = {
+                    "Metric": ["Avg Load Time (ms)", "Avg Word Count", "Avg Internal Links", "Avg External Links", 
+                               "Avg Image Count", "Mobile-Friendly Sites", "Total URLs Analyzed"],
+                    "Value": [f"{df['load_time_ms'].mean():.2f}", f"{df['word_count'].mean():.0f}", 
+                              f"{df['internal_link_count'].mean():.1f}", f"{df['external_link_count'].mean():.1f}", 
+                              f"{df['image_count'].mean():.1f}", f"{df['mobile_friendly'].sum()}", f"{len(df)}"]
                 }
-                summary_df = pd.DataFrame(summary)
+                st.table(pd.DataFrame(summary_data))
 
-                flesch_score = summary_df["Avg Flesch Reading Ease"][0]
-                flesch_color = "green" if flesch_score >= 70 else "yellow" if flesch_score >= 50 else "red"
-                kincaid_score = summary_df["Avg Flesch-Kincaid Grade"][0]
-                kincaid_color = "green" if kincaid_score <= 7 else "yellow" if kincaid_score <= 10 else "red"
-                gunning_score = summary_df["Avg Gunning Fog"][0]
-                gunning_color = "green" if gunning_score <= 8 else "yellow" if gunning_score <= 12 else "red"
-                seo_score = summary_df["Avg SEO Score"][0]
-                seo_color = "green" if seo_score >= 80 else "yellow" if seo_score >= 50 else "red"
+                # Readability and SEO Scores Table
+                st.markdown("#### Readability & SEO Scores")
+                readability_data = {
+                    "Metric": ["Avg Flesch Reading Ease", "Avg Flesch-Kincaid Grade", "Avg Gunning Fog", "Avg SEO Score"],
+                    "Score": [f"{df['flesch_reading_ease'].mean():.2f}", f"{df['flesch_kincaid_grade'].mean():.2f}", 
+                              f"{df['gunning_fog'].mean():.2f}", f"{df['seo_score'].mean():.2f}"],
+                    "Status": [
+                        "Very Easy" if df['flesch_reading_ease'].mean() >= 70 else "Moderate" if df['flesch_reading_ease'].mean() >= 50 else "Difficult",
+                        "Easy" if df['flesch_kincaid_grade'].mean() <= 7 else "Average" if df['flesch_kincaid_grade'].mean() <= 10 else "Advanced",
+                        "Easy" if df['gunning_fog'].mean() <= 8 else "Moderate" if df['gunning_fog'].mean() <= 12 else "Complex",
+                        "Excellent" if df['seo_score'].mean() >= 80 else "Good" if df['seo_score'].mean() >= 50 else "Needs Improvement"
+                    ],
+                    "Color": [
+                        "green" if df['flesch_reading_ease'].mean() >= 70 else "yellow" if df['flesch_reading_ease'].mean() >= 50 else "red",
+                        "green" if df['flesch_kincaid_grade'].mean() <= 7 else "yellow" if df['flesch_kincaid_grade'].mean() <= 10 else "red",
+                        "green" if df['gunning_fog'].mean() <= 8 else "yellow" if df['gunning_fog'].mean() <= 12 else "red",
+                        "green" if df['seo_score'].mean() >= 80 else "yellow" if df['seo_score'].mean() >= 50 else "red"
+                    ]
+                }
+                readability_df = pd.DataFrame(readability_data)
+                readability_df['Score'] = readability_df.apply(lambda row: f"<span style='color:{row['Color']}'>{row['Score']}</span>", axis=1)
+                readability_df['Status'] = readability_df.apply(lambda row: f"<span style='color:{row['Color']}'>{row['Status']}</span>", axis=1)
+                st.markdown(readability_df[['Metric', 'Score', 'Status']].to_html(escape=False), unsafe_allow_html=True)
 
-                st.dataframe(summary_df)
-                st.markdown(f"""
-                - <span style='color:{flesch_color}'>Avg Flesch Reading Ease: {flesch_score:.2f}</span>  
-                - <span style='color:{kincaid_color}'>Avg Flesch-Kincaid Grade: {kincaid_score:.2f}</span>  
-                - <span style='color:{gunning_color}'>Avg Gunning Fog: {gunning_score:.2f}</span>  
-                - <span style='color:{seo_color}'>Avg SEO Score: {seo_score:.2f}</span>
-                """, unsafe_allow_html=True)
-
+                # Keyword Density Recommendations
                 if target_keywords:
-                    st.write("Keyword Density Recommendations:")
+                    st.markdown("#### Keyword Density Recommendations")
+                    keyword_data = []
                     for result in results:
                         if result['status'] == "Success" and result['keyword_densities']:
-                            st.write(f"URL: {result['url']}")
                             for kw, density in result['keyword_densities'].items():
                                 recommendation = "Optimal" if 1 <= density <= 2 else "Increase" if density < 1 else "Reduce"
-                                st.write(f"- '{kw}': {density:.2f}% ({recommendation})")
+                                color = "green" if 1 <= density <= 2 else "yellow" if density < 1 else "red"
+                                keyword_data.append({
+                                    "URL": result['url'],
+                                    "Keyword": kw,
+                                    "Density": f"<span style='color:{color}'>{density:.2f}%</span>",
+                                    "Recommendation": f"<span style='color:{color}'>{recommendation}</span>"
+                                })
+                    if keyword_data:
+                        st.markdown(pd.DataFrame(keyword_data).to_html(escape=False), unsafe_allow_html=True)
 
+                # Broken Links
                 broken_internals = [link for link in internal_links_data if isinstance(link['status_code'], int) and link['status_code'] >= 400]
                 broken_externals = [link for link in external_links_data if isinstance(link['status_code'], int) and link['status_code'] >= 400]
                 if broken_internals or broken_externals:
-                    st.write("**Broken Links Detected:**")
-                    st.write(f"Internal: {len(broken_internals)}, External: {len(broken_externals)}")
+                    st.markdown("#### Broken Links")
+                    broken_data = {
+                        "Type": ["Internal", "External"],
+                        "Count": [len(broken_internals), len(broken_externals)],
+                        "Status": ["<span style='color:red'>Issues Detected</span>" if len(broken_internals) > 0 else "No Issues",
+                                   "<span style='color:red'>Issues Detected</span>" if len(broken_externals) > 0 else "No Issues"]
+                    }
+                    st.markdown(pd.DataFrame(broken_data).to_html(escape=False), unsafe_allow_html=True)
 
-                st.write("**Accessibility Summary:**")
+                # Accessibility Summary
+                st.markdown("#### Accessibility Summary")
+                accessibility_data = []
                 for result in results:
                     if result['status'] == "Success":
-                        st.write(f"URL: {result['url']}")
-                        st.write(f"- Images missing alt text: {result['alt_text_missing']}")
-                        st.write(f"- Heading hierarchy issues: {'Yes' if result['hierarchy_issues'] else 'No'}")
+                        accessibility_data.append({
+                            "URL": result['url'],
+                            "Images Missing Alt Text": result['alt_text_missing'],
+                            "Heading Issues": "Yes" if result['hierarchy_issues'] else "No",
+                            "Status": "<span style='color:red'>Issues Detected</span>" if result['alt_text_missing'] > 0 or result['hierarchy_issues'] else "<span style='color:green'>No Issues</span>"
+                        })
+                st.markdown(pd.DataFrame(accessibility_data).to_html(escape=False), unsafe_allow_html=True)
 
+                # Duplicate Content Similarity
                 if duplicate_matrix is not None:
-                    st.markdown("**Duplicate Content Similarity (Cosine):**")
+                    st.markdown("#### Duplicate Content Similarity (Cosine)")
+                    duplicate_data = []
                     for i in range(len(duplicate_matrix)):
                         for j in range(len(duplicate_matrix[i])):
                             if i < j:
                                 similarity = duplicate_matrix[i][j]
                                 color = "green" if similarity < 0.5 else "yellow" if similarity < 0.8 else "red"
-                                st.markdown(f"URLs {i+1} vs {j+1}: <span style='color:{color}'>{similarity:.2f}</span>", unsafe_allow_html=True)
+                                duplicate_data.append({
+                                    "URL Pair": f"URL {i+1} vs URL {j+1}",
+                                    "Similarity": f"<span style='color:{color}'>{similarity:.2f}</span>",
+                                    "Status": f"<span style='color:{color}'>{'Low' if similarity < 0.5 else 'Moderate' if similarity < 0.8 else 'High'}</span>"
+                                })
+                    if duplicate_data:
+                        st.markdown(pd.DataFrame(duplicate_data).to_html(escape=False), unsafe_allow_html=True)
 
-                full_report = pd.concat([summary_df, df, pd.DataFrame(internal_links_data), pd.DataFrame(external_links_data), pd.DataFrame(headings_data), pd.DataFrame(images_data)], axis=1)
-                st.download_button("Download Full Report", full_report.to_csv(index=False).encode('utf-8'), "seotron3000_report.csv", "text/csv")
+                # Download Button
+                st.markdown("---")
+                full_report = pd.concat([df, pd.DataFrame(internal_links_data), pd.DataFrame(external_links_data), pd.DataFrame(headings_data), pd.DataFrame(images_data)], axis=1)
+                st.download_button("Download Full Report", full_report.to_csv(index=False).encode('utf-8'), "seotron3000_report.csv", "text/csv", use_container_width=True)
 
-                st.markdown("### Readability Legend")
-                st.markdown("""
-                **Flesch Reading Ease (0-100):** Measures text readability. Higher scores indicate easier reading.  
-                - 70-100: Very easy to read (Green).  
-                - 50-70: Moderately easy, suitable for most audiences (Yellow).  
-                - 0-50: Difficult to read (Red).  
-
-                **Flesch-Kincaid Grade (Grade Level):** Indicates the U.S. grade level needed to understand the text.  
-                - 5-7: Easy, readable by 5th-7th graders (Green).  
-                - 8-10: Average, suitable for general web content (Yellow).  
-                - 11+: Advanced, requires higher education (Red).  
-
-                **Gunning Fog Index (Grade Level):** Estimates years of education needed based on complex words and sentence length.  
-                - 6-8: Easy, widely accessible (Green).  
-                - 9-12: Moderate, professional-level reading (Yellow).  
-                - 13+: Complex, technical or academic (Red).
-                """)
-
-                st.markdown("### Duplicate Content Similarity Legend")
-                st.markdown("""
-                **Duplicate Content Similarity (Cosine, 0-1):** Measures text similarity between URLs. Higher values indicate more duplication.  
-                - 0.0-0.5: Low similarity, unique content (Green).  
-                - 0.5-0.8: Moderate similarity, some overlap (Yellow).  
-                - 0.8-1.0: High similarity, potential duplicates (Red).
-                """)
+                # Legends in Expander
+                with st.expander("View Scoring Legends"):
+                    st.markdown("##### Readability Legend")
+                    st.markdown("""
+                    - **Flesch Reading Ease (0-100):** Higher scores = easier to read.  
+                      - 70-100: Very Easy (Green)  
+                      - 50-70: Moderate (Yellow)  
+                      - 0-50: Difficult (Red)  
+                    - **Flesch-Kincaid Grade:** U.S. grade level required.  
+                      - 5-7: Easy (Green)  
+                      - 8-10: Average (Yellow)  
+                      - 11+: Advanced (Red)  
+                    - **Gunning Fog:** Education years needed.  
+                      - 6-8: Easy (Green)  
+                      - 9-12: Moderate (Yellow)  
+                      - 13+: Complex (Red)
+                    """)
+                    st.markdown("##### Duplicate Content Similarity Legend")
+                    st.markdown("""
+                    - **Cosine Similarity (0-1):** Higher values = more duplication.  
+                      - 0.0-0.5: Low (Green)  
+                      - 0.5-0.8: Moderate (Yellow)  
+                      - 0.8-1.0: High (Red)
+                    """)
 
             with tabs[1]:
                 st.subheader("Main Table")
@@ -413,45 +455,45 @@ def main():
                     'internal_link_count', 'external_link_count', 'image_count', 'mobile_friendly', 'canonical_url', 'robots_txt_status',
                     'meta_title', 'meta_description', 'h1_count', 'h2_count', 'h3_count', 'h4_count', 'h5_count', 'h6_count', 'seo_score'
                 ]
-                st.dataframe(df[display_columns])
-                st.download_button("Download Core Metrics", df[display_columns].to_csv(index=False).encode('utf-8'), "core_metrics.csv", "text/csv")
+                st.dataframe(df[display_columns], use_container_width=True)
+                st.download_button("Download Core Metrics", df[display_columns].to_csv(index=False).encode('utf-8'), "core_metrics.csv", "text/csv", use_container_width=True)
 
             with tabs[2]:
-                st.subheader("Internal Hyperlinks")
+                st.subheader("Internal Links")
                 internal_links_df = pd.DataFrame(internal_links_data)
-                st.dataframe(internal_links_df)
-                st.download_button("Download Internal Links", internal_links_df.to_csv(index=False).encode('utf-8'), "internal_links.csv", "text/csv")
+                st.dataframe(internal_links_df, use_container_width=True)
+                st.download_button("Download Internal Links", internal_links_df.to_csv(index=False).encode('utf-8'), "internal_links.csv", "text/csv", use_container_width=True)
 
             with tabs[3]:
-                st.subheader("External Hyperlinks")
+                st.subheader("External Links")
                 external_links_df = pd.DataFrame(external_links_data)
-                st.dataframe(external_links_df)
-                st.download_button("Download External Links", external_links_df.to_csv(index=False).encode('utf-8'), "external_links.csv", "text/csv")
+                st.dataframe(external_links_df, use_container_width=True)
+                st.download_button("Download External Links", external_links_df.to_csv(index=False).encode('utf-8'), "external_links.csv", "text/csv", use_container_width=True)
 
             with tabs[4]:
                 st.subheader("Headings (H1-H6)")
                 headings_df = pd.DataFrame(headings_data)
-                st.dataframe(headings_df)
-                st.download_button("Download Headings", headings_df.to_csv(index=False).encode('utf-8'), "headings.csv", "text/csv")
+                st.dataframe(headings_df, use_container_width=True)
+                st.download_button("Download Headings", headings_df.to_csv(index=False).encode('utf-8'), "headings.csv", "text/csv", use_container_width=True)
 
             with tabs[5]:
                 st.subheader("Image SEO Scan")
                 images_df = pd.DataFrame(images_data)
-                st.dataframe(images_df)
-                st.download_button("Download Image Data", images_df.to_csv(index=False).encode('utf-8'), "images.csv", "text/csv")
+                st.dataframe(images_df, use_container_width=True)
+                st.download_button("Download Image Data", images_df.to_csv(index=False).encode('utf-8'), "images.csv", "text/csv", use_container_width=True)
 
             with tabs[6]:
                 st.subheader("Visual Dashboard")
                 if not df.empty:
                     st.write("Readability Scores Across URLs:")
                     fig = px.bar(df, x='url', y=['flesch_reading_ease', 'flesch_kincaid_grade', 'gunning_fog'], title="Readability Metrics", barmode='group')
-                    st.plotly_chart(fig)
+                    st.plotly_chart(fig, use_container_width=True)
                     st.write("Link Distribution:")
                     link_fig = px.pie(names=['Internal Links', 'External Links'], values=[df['internal_link_count'].sum(), df['external_link_count'].sum()], title="Link Types")
-                    st.plotly_chart(link_fig)
+                    st.plotly_chart(link_fig, use_container_width=True)
                     st.write("SEO Score Distribution:")
                     seo_fig = px.histogram(df, x='seo_score', title="SEO Score Histogram")
-                    st.plotly_chart(seo_fig)
+                    st.plotly_chart(seo_fig, use_container_width=True)
 
 if __name__ == "__main__":
     main()
