@@ -595,54 +595,42 @@ def main():
                     link_fig = px.pie(names=['Internal Links', 'External Links'], values=[df['internal_link_count'].sum(), df['external_link_count'].sum()], title="Link Types")
                     st.plotly_chart(link_fig, use_container_width=True)
                     st.write("SEO Score Distribution:")
-                    # Define color bins for SEO scores
-                    seo_fig = px.histogram(
+                    # Use a bar chart to show individual SEO scores for each URL
+                    seo_fig = px.bar(
                         df,
-                        x='seo_score',
-                        title="SEO Score Histogram",
-                        nbins=10,  # Use 10 bins for better granularity (0-10, 10-20, ..., 90-100)
-                        labels={'seo_score': 'SEO Score', 'count': 'Number of URLs'},
-                        custom_data=['url', 'seo_score'],  # Pass URLs and SEO scores for hover
-                        color_discrete_sequence=['red']  # Default color, will override with color_discrete_map
+                        x='url',
+                        y='seo_score',
+                        title="SEO Scores by URL",
+                        labels={'seo_score': 'SEO Score', 'url': 'URL'},
+                        color='seo_score',
+                        color_continuous_scale=['red', 'orange', 'green'],
+                        range_color=[0, 100]
                     )
                     # Update layout for better readability
                     seo_fig.update_layout(
-                        xaxis_title="SEO Score",
-                        yaxis_title="Number of URLs",
-                        bargap=0.1
+                        xaxis_title="URL",
+                        yaxis_title="SEO Score",
+                        xaxis_tickangle=45
                     )
-                    # Add color-coding based on score ranges
+                    # Customize hover template to show URL and SEO score
                     seo_fig.update_traces(
-                        marker=dict(
-                            color=[
-                                'green' if score >= 80 else 'orange' if score >= 50 else 'red'
-                                for score in df['seo_score']
-                            ]
-                        ),
-                        # Customize hover template to show bin range, count, and URLs with their exact scores
-                        hovertemplate=(
-                            "<b>SEO Score Range</b>: %{x}<br>" +
-                            "<b>Number of URLs</b>: %{y}<br>" +
-                            "<b>Sites</b>:<br>" +
-                            "%{customdata[0]} (Score: %{customdata[1]})<br>" +
-                            "<extra></extra>"
-                        )
+                        hovertemplate="<b>URL</b>: %{x}<br><b>SEO Score</b>: %{y}<extra></extra>"
                     )
-                    # Add vertical lines for thresholds
-                    seo_fig.add_vline(x=50, line_dash="dash", line_color="black", annotation_text="Needs Improvement", annotation_position="top left")
-                    seo_fig.add_vline(x=80, line_dash="dash", line_color="black", annotation_text="Excellent", annotation_position="top right")
+                    # Add horizontal lines for thresholds
+                    seo_fig.add_hline(y=50, line_dash="dash", line_color="black", annotation_text="Needs Improvement", annotation_position="right")
+                    seo_fig.add_hline(y=80, line_dash="dash", line_color="black", annotation_text="Excellent", annotation_position="right")
                     st.plotly_chart(seo_fig, use_container_width=True)
-                    # Add a caption explaining the histogram
+                    # Add a caption explaining the chart
                     st.markdown("""
-                    **How to Interpret the SEO Score Histogram:**
-                    - The x-axis shows the SEO score (0-100).
-                    - The y-axis shows the number of URLs with scores in each range.
+                    **How to Interpret the SEO Scores by URL Chart:**
+                    - The x-axis shows each analyzed URL.
+                    - The y-axis shows the SEO score (0-100) for each URL.
                     - **Color Coding:**
                       - **Red (0-50):** Needs Improvement
                       - **Orange (50-80):** Good
                       - **Green (80-100):** Excellent
                     - Dashed lines mark the thresholds: 50 (Needs Improvement) and 80 (Excellent).
-                    - **Hover over a bar** to see the specific URLs and their exact SEO scores in that range.
+                    - **Hover over a bar** to see the URL and its exact SEO score.
                     """)
 
 if __name__ == "__main__":
