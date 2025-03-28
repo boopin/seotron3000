@@ -243,9 +243,18 @@ def analyze_url(url, target_keywords=None):
     return result, text_content
 
 # Styling function for coloring cells in st.dataframe
-def color_cells(val, color_map):
-    color = color_map.get(val, "black")
-    return f"color: {color}; font-weight: bold"
+def color_cells(val, color_map=None):
+    if color_map:
+        color = color_map.get(val, "black")
+        return f"color: {color}; font-weight: bold"
+    # For numerical columns, we'll pass the value directly and handle in the apply function
+    return None
+
+def color_numerical_cells(val, thresholds, colors):
+    for threshold, color in thresholds:
+        if val <= threshold:
+            return f"color: {color}; font-weight: bold"
+    return f"color: {colors[-1]}; font-weight: bold"
 
 def main():
     st.set_page_config(page_title="SEOtron 3000: The Galactic Web Analyzer", layout="wide", page_icon="icon.png")
@@ -319,6 +328,18 @@ def main():
 
             st.session_state.results = results
             df = pd.DataFrame(results)
+
+            # Add status columns for readability scores
+            df['flesch_reading_ease_status'] = df['flesch_reading_ease'].apply(
+                lambda x: "Very Easy" if x >= 70 else "Moderate" if x >= 50 else "Difficult"
+            )
+            df['flesch_kincaid_grade_status'] = df['flesch_kincaid_grade'].apply(
+                lambda x: "Easy" if x <= 7 else "Average" if x <= 10 else "Advanced"
+            )
+            df['gunning_fog_status'] = df['gunning_fog'].apply(
+                lambda x: "Easy" if x <= 8 else "Moderate" if x <= 12 else "Complex"
+            )
+
             duplicate_matrix = detect_duplicates(contents)
 
             # Tabs
@@ -524,9 +545,21 @@ def main():
                 display_columns = [
                     'url', 'status', 'load_time_ms', 'word_count', 'flesch_reading_ease', 'flesch_kincaid_grade', 'gunning_fog',
                     'internal_link_count', 'external_link_count', 'image_count', 'mobile_friendly', 'canonical_url', 'robots_txt_status',
-                    'meta_title', 'meta_description', 'h1_count', 'h2_count', 'h3_count', 'h4_count', 'h5_count', 'h6_count', 'seo_score'
+                    'meta_title', 'meta_description', 'h1_count', 'h2_count', 'h3_count', 'h4_count', 'h5_count', 'h6_count', 'seo_score',
+                    'flesch_reading_ease_status', 'flesch_kincaid_grade_status', 'gunning_fog_status'
                 ]
-                st.dataframe(df[display_columns], use_container_width=True)
+                # Define styling for readability scores
+                styled_df = df[display_columns].style.apply(
+                    lambda x: [color_numerical_cells(val, [(50, "red"), (70, "orange")], ["green"]) for val in x],
+                    subset=['flesch_reading_ease']
+                ).apply(
+                    lambda x: [color_numerical_cells(val, [(7, "green"), (10, "orange")], ["red"]) for val in x],
+                    subset=['flesch_kincaid_grade']
+                ).apply(
+                    lambda x: [color_numerical_cells(val, [(8, "green"), (12, "orange")], ["red"]) for val in x],
+                    subset=['gunning_fog']
+                )
+                st.dataframe(styled_df, use_container_width=True)
                 st.download_button("Download Core Metrics", df[display_columns].to_csv(index=False).encode('utf-8'), "core_metrics.csv", "text/csv", use_container_width=True)
 
             with tabs[2]:
