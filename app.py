@@ -61,7 +61,7 @@ st.markdown("""
         padding: 10px 20px;
         font-size: 16px;
         font-weight: 500;
-        transition: all 0.3s ease;
+        transition: all W 0.3s ease;
     }
     .stButton>button:hover {
         background: linear-gradient(90deg, #5A32A3, #0D6EFD);
@@ -214,6 +214,66 @@ def extract_meta_tags(soup):
     meta_description = soup.find('meta', attrs={'name': 'description'})
     meta_tags['description'] = meta_description['content'].strip() if meta_description else ''
     return meta_tags
+
+def analyze_meta_tags(meta_title, meta_description, target_keywords=None):
+    # Initialize results
+    title_status = "Optimal"
+    description_status = "Optimal"
+    title_recommendation = []
+    description_recommendation = []
+
+    # Meta Title Analysis
+    title_length = len(meta_title)
+    if not meta_title:
+        title_status = "Missing"
+        title_recommendation.append("Add a meta title (50-60 characters).")
+    else:
+        if title_length < 50:
+            title_status = "Too Short"
+            title_recommendation.append(f"Extend meta title to 50-60 characters (current: {title_length}).")
+        elif title_length > 60:
+            title_status = "Too Long"
+            title_recommendation.append(f"Shorten meta title to 60 characters or less (current: {title_length}).")
+
+        # Check for target keyword in title
+        if target_keywords:
+            title_lower = meta_title.lower()
+            keywords_in_title = [kw for kw in target_keywords if kw.lower() in title_lower]
+            if not keywords_in_title:
+                title_recommendation.append(f"Include target keyword(s) {', '.join(target_keywords)} in meta title.")
+
+    # Meta Description Analysis
+    description_length = len(meta_description)
+    if not meta_description:
+        description_status = "Missing"
+        description_recommendation.append("Add a meta description (150-160 characters).")
+    else:
+        if description_length < 150:
+            description_status = "Too Short"
+            description_recommendation.append(f"Extend meta description to 150-160 characters (current: {description_length}).")
+        elif description_length > 160:
+            description_status = "Too Long"
+            description_recommendation.append(f"Shorten meta description to 160 characters or less (current: {description_length}).")
+
+        # Check for target keyword in description
+        if target_keywords:
+            description_lower = meta_description.lower()
+            keywords_in_description = [kw for kw in target_keywords if kw.lower() in description_lower]
+            if not keywords_in_description:
+                description_recommendation.append(f"Include target keyword(s) {', '.join(target_keywords)} in meta description.")
+
+        # Check for call-to-action in description
+        cta_phrases = ["learn", "discover", "explore", "find out", "get started", "shop now", "try now"]
+        has_cta = any(phrase in description_lower for phrase in cta_phrases)
+        if not has_cta:
+            description_recommendation.append("Add a call-to-action (e.g., 'Discover Now') to improve click-through rate.")
+
+    return {
+        'title_status': title_status,
+        'description_status': description_status,
+        'title_recommendation': "; ".join(title_recommendation) if title_recommendation else "No changes needed.",
+        'description_recommendation': "; ".join(description_recommendation) if description_recommendation else "No changes needed."
+    }
 
 def extract_headings(soup):
     headings = []
@@ -376,6 +436,11 @@ def calculate_seo_score(result):
     # Deduct points for indexability issues
     if result['indexability_status'] != "Indexable":
         score -= 15
+    # Deduct points for meta tag issues
+    if result['meta_title_status'] in ["Missing", "Too Short", "Too Long"]:
+        score -= 5
+    if result['meta_description_status'] in ["Missing", "Too Short", "Too Long"]:
+        score -= 5
     return min(round(score), 100)
 
 def analyze_url(url, target_keywords=None):
@@ -386,6 +451,10 @@ def analyze_url(url, target_keywords=None):
         'load_time_ms': 0,
         'meta_title': '',
         'meta_description': '',
+        'meta_title_status': '',
+        'meta_description_status': '',
+        'meta_title_recommendation': '',
+        'meta_description_recommendation': '',
         'h1_count': 0, 'h2_count': 0, 'h3_count': 0, 'h4_count': 0, 'h5_count': 0, 'h6_count': 0,
         'word_count': 0,
         'flesch_reading_ease': 0, 'flesch_kincaid_grade': 0, 'gunning_fog': 0,
@@ -420,6 +489,13 @@ def analyze_url(url, target_keywords=None):
         meta_tags = extract_meta_tags(soup)
         result['meta_title'] = meta_tags.get('title', '')
         result['meta_description'] = meta_tags.get('description', '')
+
+        # Meta Tag Analysis
+        meta_analysis = analyze_meta_tags(result['meta_title'], result['meta_description'], target_keywords)
+        result['meta_title_status'] = meta_analysis['title_status']
+        result['meta_description_status'] = meta_analysis['description_status']
+        result['meta_title_recommendation'] = meta_analysis['title_recommendation']
+        result['meta_description_recommendation'] = meta_analysis['description_recommendation']
 
         headings, hierarchy_issues = extract_headings(soup)
         result['headings'] = headings
@@ -481,9 +557,9 @@ def color_numerical_cells(val, thresholds, colors):
 def apply_badge(val):
     if val in ["Very Easy", "Easy", "Low", "No Issues", "Excellent", "Optimal", "Uses HTTPS", "Indexable"]:
         return f'<span class="badge badge-green">{val}</span>'
-    elif val in ["Moderate", "Average", "Good", "Increase", "Unknown (robots.txt not accessible)"]:
+    elif val in ["Moderate", "Average", "Good", "Increase", "Unknown (robots.txt not accessible)", "Too Short"]:
         return f'<span class="badge badge-orange">{val}</span>'
-    elif val in ["Difficult", "Advanced", "Complex", "High", "Issues Detected", "Needs Improvement", "Reduce", "HTTP (Insecure)", "Noindex Tag Detected", "Blocked by robots.txt", "Login Required (401 Unauthorized)"]:
+    elif val in ["Difficult", "Advanced", "Complex", "High", "Issues Detected", "Needs Improvement", "Reduce", "HTTP (Insecure)", "Noindex Tag Detected", "Blocked by robots.txt", "Login Required (401 Unauthorized)", "Missing", "Too Long"]:
         return f'<span class="badge badge-red">{val}</span>'
     return val
 
@@ -627,6 +703,27 @@ def main():
                 summary_df = pd.DataFrame(summary_data)
                 # Convert to HTML table and render
                 st.markdown(df_to_html_table(summary_df), unsafe_allow_html=True)
+
+                # Meta Tag Optimization Recommendations
+                st.markdown("#### 📝 Meta Tag Optimization Recommendations")
+                meta_data = []
+                for result in results:
+                    if result['status'] == "Success":
+                        meta_data.append({
+                            "URL": result['url'],
+                            "Meta Title": result['meta_title'][:50] + "..." if len(result['meta_title']) > 50 else result['meta_title'],
+                            "Title Status": result['meta_title_status'],
+                            "Title Recommendation": result['meta_title_recommendation'],
+                            "Meta Description": result['meta_description'][:50] + "..." if len(result['meta_description']) > 50 else result['meta_description'],
+                            "Description Status": result['meta_description_status'],
+                            "Description Recommendation": result['meta_description_recommendation'],
+                            "Overall Status": "No Issues" if result['meta_title_status'] == "Optimal" and result['meta_description_status'] == "Optimal" else "Needs Improvement"
+                        })
+                meta_df = pd.DataFrame(meta_data)
+                meta_df['Title Status'] = meta_df['Title Status'].apply(apply_badge)
+                meta_df['Description Status'] = meta_df['Description Status'].apply(apply_badge)
+                meta_df['Overall Status'] = meta_df['Overall Status'].apply(apply_badge)
+                st.markdown(df_to_html_table(meta_df), unsafe_allow_html=True)
 
                 # Readability and SEO Scores Table
                 st.markdown("#### 📖 Readability & SEO Scores")
@@ -786,13 +883,28 @@ def main():
                       - 0.5-0.8: Moderate (Orange)  
                       - 0.8-1.0: High (Red)
                     """)
+                    st.markdown("##### 📝 Meta Tag Optimization Legend")
+                    st.markdown("""
+                    - **Meta Title Length:**  
+                      - 50-60 characters: Optimal (Green)  
+                      - <50 characters: Too Short (Orange)  
+                      - >60 characters: Too Long (Red)  
+                      - Missing: Missing (Red)  
+                    - **Meta Description Length:**  
+                      - 150-160 characters: Optimal (Green)  
+                      - <150 characters: Too Short (Orange)  
+                      - >160 characters: Too Long (Red)  
+                      - Missing: Missing (Red)
+                    """)
 
             with tabs[1]:
                 st.subheader("📋 Main Table")
                 display_columns = [
                     'url', 'status', 'load_time_ms', 'word_count', 'flesch_reading_ease', 'flesch_kincaid_grade', 'gunning_fog',
                     'internal_link_count', 'external_link_count', 'image_count', 'mobile_friendly', 'canonical_url', 'robots_txt_status',
-                    'meta_title', 'meta_description', 'h1_count', 'h2_count', 'h3_count', 'h4_count', 'h5_count', 'h6_count', 'seo_score',
+                    'meta_title', 'meta_description', 'meta_title_status', 'meta_description_status', 
+                    'meta_title_recommendation', 'meta_description_recommendation',
+                    'h1_count', 'h2_count', 'h3_count', 'h4_count', 'h5_count', 'h6_count', 'seo_score',
                     'flesch_reading_ease_status', 'flesch_kincaid_grade_status', 'gunning_fog_status',
                     'https_status', 'indexability_status'
                 ]
@@ -804,6 +916,8 @@ def main():
                 main_df['gunning_fog_status'] = main_df['gunning_fog_status'].apply(apply_badge)
                 main_df['https_status'] = main_df['https_status'].apply(apply_badge)
                 main_df['indexability_status'] = main_df['indexability_status'].apply(apply_badge)
+                main_df['meta_title_status'] = main_df['meta_title_status'].apply(apply_badge)
+                main_df['meta_description_status'] = main_df['meta_description_status'].apply(apply_badge)
                 # Apply numerical coloring to readability scores
                 def apply_numerical_coloring(df, column, thresholds, colors):
                     for idx, val in df[column].items():
